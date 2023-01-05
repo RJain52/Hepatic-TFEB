@@ -5,10 +5,10 @@ editor: visual
 ---
 
 # 1. Summary
-This code covers analysis of transcription factor EB ChIP-seq data. 
 
-http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract
-https://www.biostars.org/p/274689/
+This code covers analysis of transcription factor EB ChIP-seq data.
+
+http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract https://www.biostars.org/p/274689/
 
 ```{r, echo=FALSE, warning=FALSE}
 if(!require(tidyverse)){install.packages("tidyverse")}
@@ -22,4 +22,3 @@ BiocManager::install("ChIPseeker")
 library(ChIPseeker)
 library(clusterProfiler)
 ```
-
