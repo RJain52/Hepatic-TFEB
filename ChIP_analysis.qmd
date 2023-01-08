@@ -12,6 +12,7 @@ http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPse
 
 ```{r, echo=FALSE, warning=FALSE}
 if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(readxl)){install.packages("readxl")}
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("GO.db")
@@ -22,3 +23,62 @@ BiocManager::install("ChIPseeker")
 library(ChIPseeker)
 library(clusterProfiler)
 ```
+
+```{r}
+list.files("data")
+
+RT_CTD <- read_xlsx("data/4_Rpb1_CTD_peaks_annotated_p.xlsx")
+RT_TFEB <- read_xlsx("data/4_TFEB_peaks_annotated_p.xlsx")
+Cold_CTD <- read_xlsx("data/10_Rpb1_CTD_peaks_annotated_p.xlsx")
+Cold_TFEB <- read_xlsx("data/10_TFEB_peaks_annotated_p.xlsx")
+```
+
+```{r}
+RT_CTD$Annot_new <- gsub(" .*", "", RT_CTD$Annotation)
+RT_TFEB$Annot_new <- gsub(" .*", "", RT_TFEB$Annotation)
+RT_only <- merge(RT_CTD, RT_TFEB, by = c("Gene Name", "Annotation"))
+RT_only$label_me <- ifelse(RT_only$`Gene Name` == "Pla2g15", T, F)
+
+p0 <- RT_only |> filter(Annot_new.x == "promoter-TSS") |>
+  ggplot(aes(log10(`Peak Score.x`), log10(`Peak Score.y`), 
+           color = label_me,
+           fill = label_me,
+           name = `Gene Name`
+           )
+         ) + geom_point()
+plotly::ggplotly(p0)
+
+p0 <- RT_only |> filter(Annot_new.x == "Intergenic") |>
+  ggplot(aes(log10(`Peak Score.x`), log10(`Peak Score.y`), 
+           color = label_me,
+           fill = label_me,
+           name = `Gene Name`
+           )
+         ) + geom_point()
+plotly::ggplotly(p0)
+
+### Cold
+Cold_CTD$Annot_new <- gsub(" .*", "", Cold_CTD$Annotation)
+Cold_TFEB$Annot_new <- gsub(" .*", "", Cold_TFEB$Annotation)
+Cold_only <- merge(Cold_CTD, Cold_TFEB, by = c("Gene Name", "Annotation"))
+Cold_only$label_me <- ifelse(Cold_only$`Gene Name` == "Pla2g15", T, F)
+
+p0 <- Cold_only |> filter(Annot_new.x == "promoter-TSS") |>
+  ggplot(aes(log10(`Peak Score.x`), log10(`Peak Score.y`), 
+           color = label_me,
+           fill = label_me,
+           name = `Gene Name`
+           )
+         ) + geom_point()
+plotly::ggplotly(p0)
+
+p0 <- Cold_only |> filter(Annot_new.x == "Intergenic") |>
+  ggplot(aes(log10(`Peak Score.x`), log10(`Peak Score.y`), 
+           color = label_me,
+           fill = label_me,
+           name = `Gene Name`
+           )
+         ) + geom_point()
+plotly::ggplotly(p0)
+```
+
