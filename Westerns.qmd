@@ -1,0 +1,65 @@
+---
+title: "Western Blots"
+author: "Raghav Jain"
+format: html
+editor: visual
+---
+
+# Packages
+
+```{r}
+#| echo: false
+#| library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(readxl)
+library(Cairo)
+```
+
+# Load data
+
+```{r}
+mdat <- read_xlsx("2022_0525_Quant.xlsx", sheet = 4)
+mdat$Condition <- factor(mdat$Condition, levels = c("RT", "Cold"))
+names(mdat)[2] <- "Treatment"
+
+mdat %>% ggplot(aes(x = Treatment, y = Ratio, fill = Treatment)) 
+
+p0 <- ggbarplot(mdat, x = "Treatment", y = "Ratio", 
+                add = c("mean_se", "dotplot"), color = "Treatment", fill = "Treatment", 
+                add.params = list(width = 0.35, 
+                                  binwidth = .18*min(mdat$Ratio, na.rm = T)),
+                alpha = 0.85, position = position_dodge(0.8), size = 0.5) +
+  scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio, na.rm = T)),
+                     expand = c(0,0))
+
+p1 <- ggpar(p0, palette = "npg", legend = "right", legend.title = "Temperature", 
+            title = "Nuclear TFEB in RT versus Cold (6h)",  
+            xlab = "Treatment", ylab = "TFEB Intensity (Nuclear/Cytosolic)") + 
+      theme_bw(base_size = 16) + 
+      theme(text = element_text(face = "bold", color = "black"))
+
+stat.test <- mdat %>%
+  na.omit() %>%
+  t_test(Ratio ~ Treatment) %>%
+  adjust_pvalue(method = "none") %>%
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test %>%
+  na.omit() %>%
+  add_xy_position(fun = "max", "Treatment", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, tip.length = 0.02, hide.ns = F)
+
+p3 <- p2
+print(p3)
+
+CairoPDF("2022_1020_TFEB_nuclear_WB_Comp.pdf", height = 10, width = 8)
+  print(p3)
+dev.off()
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

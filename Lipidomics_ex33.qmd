@@ -1,0 +1,221 @@
+---
+title: "Lipidomics_ex33"
+author: "Raghav Jain"
+format: html
+editor: visual
+---
+
+# 1. Packages
+
+```{r}
+#| echo: false
+if(!require(RaMS)){install.packages("RaMS")}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(RColorBrewer)){install.packages("RColorBrewer")}
+if(!require(ggsci)){install.packages("ggsci")}
+if(!require(scales)){install.packages("scales")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(rstatix)){install.packages("rstatix")}
+show_col(pal_npg("nrc", alpha = 0.8)(10))
+```
+
+# 2. Untargeted traces - Pooled
+
+## Load data from mzML files
+
+```{r}
+msdata_files <- list.files("data/Exp33",pattern = "mzML", full.names=TRUE)
+print(msdata_files)
+
+neg_cold <- grabMSdata(files = msdata_files[1], grab_what = "BPC")
+neg_RT <- grabMSdata(files = msdata_files[3], grab_what = "BPC")
+
+Pooled <- grabMSdata(files = msdata_files[5], grab_what = "BPC")
+Pooled_pos <- grabMSdata(files = msdata_files[6], grab_what = "BPC")
+
+pos_cold <- grabMSdata(files = msdata_files[2], grab_what = "BPC")
+pos_RT <- grabMSdata(files = msdata_files[4], grab_what = "BPC")
+
+plot1 <- neg_cold$BPC
+plot2 <- neg_RT$BPC
+
+plot3 <- Pooled$BPC
+
+plot4 <- pos_cold$BPC
+plot5 <- pos_RT$BPC
+
+plot6 <- Pooled_pos$BPC
+
+rm(neg_cold, neg_RT, pos_cold, pos_RT)
+
+plot1$filename <- "Cold"
+plot2$filename <- "RT"
+
+plot4$filename <- "Cold"
+plot5$filename <- "RT"
+
+plot3$filename <- "Negative"
+plot6$filename <- "Positive"
+
+neg_plot <- rbind(plot1, plot2)
+pos_plot <- rbind(plot4, plot5)
+pooled_plot <- rbind(plot3, plot6)
+rm(plot1, plot2, plot3, plot4, plot5, plot6)
+
+save(pos_plot, file = "data/Exp33/pos_data.RData")
+save(neg_plot, file = "data/Exp33/neg_data.RData")
+save(pooled_plot, file = "data/Exp33/pooled_data.RData")
+```
+
+## Plot traces
+
+BPC of pooled sample chromatograms from positive and negative ionization
+
+```{r}
+load("data/Exp33/pooled_data.RData")
+
+p0 <- pooled_plot |> ggplot(aes(x = rt, y=int, color=filename)) + 
+  geom_line(size = 0.8) +
+  scale_color_manual(values = c("Positive" = "#FF7F0EFF", "Negative" = "#8C564BFF")) +
+  labs(x="Retention time (min)", y="Ion intensity", color="Ionization mode") +
+  scale_y_continuous(limits = c(0, 1.1*max(pooled_plot$int)),expand = c(0,0)) + 
+  scale_x_continuous(limits = c(0,18), expand = c(0.01,0.01)) +
+  ggtitle("Pooled Liver Lipidomics", subtitle = "Base Peak Chromatogram")
+
+p1 <- p0 + theme_bw(base_size = 16, base_family = "Arial") + 
+  theme(axis.text = element_text(face = "bold"))
+print(p1)
+
+library(Cairo)
+CairoPDF(file = "output/Fig1/Fig1A_Final_wide.pdf", height = 10, width = 16)
+  print(p1)
+dev.off()
+```
+
+# 3. Volcano Plot
+
+## Exp. 33 volcano plot
+
+```{r}
+FC <- read_csv("data/Exp33/liverFDR_30.csv")
+features <- read_csv("data/Exp33/2022_0222_Exp30_features_CURATED.csv")
+
+FC$q_val <- adjust_pvalue(FC$p_val, method = "fdr")
+
+
+#### Re-edit 
+my_FC <- FC[,c(1,4:9)]
+my_feat <- features[,c(1:3, 18:19)]
+names(my_feat)[1:5] <- c("Lipid", "sig_FDR", "diffexpressed",
+                         "FC", "p_val")
+
+
+my_feat$Lipid <- paste0(my_feat$sig_FDR, "_", my_feat$diffexpressed)
+my_feat$sig_FDR <- ifelse(my_feat$p_val < 0.13, T, F)
+
+my_feat$diffexpressed <- ifelse(my_feat$sig_FDR == T & my_feat$FC > 1, "UP", "DOWN")
+
+my_feat$diffexpressed <- ifelse(my_feat$sig_FDR == F, "NO", my_feat$diffexpressed)
+
+my_feat$delabel <- NA
+my_feat$label <- NA
+
+my_FC$my_color <- ifelse(my_FC$diffexpressed == "UP", "red", "no")
+my_FC$my_color <- ifelse(my_FC$diffexpressed == "DOWN" & my_FC$my_color == "no", "blue", my_FC$my_color)
+
+my_FC$log_p <- FC$`-log10(p)`
+
+
+my_feat$my_color <- ifelse(my_feat$sig_FDR == T, "black", "grey")
+my_feat$log_p <- -log10(my_feat$p_val)
+
+test5 <- rbind(my_feat, my_FC)
+test5$log_FC <- log2(test5$FC)
+
+
+p0 <- ggplot(test5, aes(x = log_FC, y = log_p, col = my_color)) +
+  geom_point() + 
+  scale_color_manual(name = "Legend",
+                     values=c("#7E6148FF", "#4DBBD5FF","grey", "black", "#E64B35FF")) +
+  scale_x_continuous(limits = c(-4, 4)) +
+  scale_y_continuous(expand = c(0, 0.2)) +
+  theme_bw(base_size = 16, base_family = 'Arial') +
+  theme(text = element_text(colour = "black", face = "bold")) +
+  ggtitle("Unannotated features") +
+  xlab("Fold Change [Cold/RT]") +
+  ylab("-log10(p_value)")
+
+CairoPDF(file = "2022_1020_Unannotated_volcano.pdf", height = 8, width = 10)
+  print(p0)
+dev.off()
+
+#library(DataEditR)
+
+# Save output to R object & csv file
+test_BMPs <- data_edit(test5,
+                        save_as = "BMP_annotated_features.csv")
+
+#data_edit()
+
+test_BMPs <- read_csv("BMP_annotated_features.csv")
+test_BMPs$BMP <- ifelse(test_BMPs$my_color == "green", 5, 0)
+
+p0 <- ggplot(test_BMPs, aes(x = log_FC, y = log_p, col = my_color, size = BMP)) +
+  geom_point() + 
+  scale_color_manual(name = "Legend",
+                     values=c("#7E6148FF", "#4DBBD5FF","#00A087FF", "grey", "black", "#E64B35FF"),
+                     labels = c("Feature (q<0.30)", "Decreased",
+                                "BMP Lipid", "Feature (q>0.30)",
+                                "FDR>0.30", "Increased")) +
+  scale_x_continuous(limits = c(-4, 4)) +
+  scale_y_continuous(expand = c(0, 0.2)) +
+  theme_bw(base_size = 16, base_family = 'Arial') +
+  theme(text = element_text(colour = "black", face = "bold")) +
+  ggtitle("Unannotated features") +
+  xlab("Fold Change [Cold/RT]") +
+  ylab("-log10(p_value)")
+p0
+
+
+CairoPDF(file = "2022_1020_BMP_annotated_volcano.pdf", height = 8, width = 10)
+  print(p0)
+dev.off()
+
+getwd()
+  
+get_palette(palette = "npg", 7)
+show_col(pal_npg("nrc")(10))
+
+
+
+
+
+```
+
+## Venn Diagram
+
+```{r}
+###
+#Venn
+a = table(is.na(test5$delabel))
+
+b <- data.frame(x = c(712, 1233))
+
+pie(b$x, 
+    labels = c("Identified Lipids (712 = 36.6%)", "Lipid-like features (1233 = 63.4%)"),
+    col = c("#e2725b","grey90"),
+    main = "Liver Lipidomics Pie Chart")
+
+library(Cairo)
+CairoPDF(file = "Feature_comp.pdf", height = 8, width = 8)
+  pie(b$x, 
+    labels = c("Identified Lipids (712 = 36.6%)", "Lipid-like features (1233 = 63.4%)"),
+    col = c("#e2725b","grey90"),
+    main = "Liver Lipidomics Pie Chart")
+dev.off()
+
+```
+
+## Nuc Fract
+

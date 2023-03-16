@@ -8,29 +8,52 @@ editor: visual
 
 This code covers analysis of transcription factor EB ChIP-seq data.
 
-http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract https://www.biostars.org/p/274689/
+http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract https://www.biostars.org/p/274689/ https://hbctraining.github.io/Intro-to-ChIPseq/lessons/05_peak_calling_macs.html
 
 ```{r, echo=FALSE, warning=FALSE}
 if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(readxl)){install.packages("readxl")}
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-BiocManager::install("GO.db")
-BiocManager::install("HDO.db")
-BiocManager::install("clusterProfiler")
-BiocManager::install("ChIPseeker")
-
+if(!require(GO.db)){BiocManager::install("GO.db")}
+if(!require(HDO.db)){BiocManager::install("HDO.db")}
+if(!require(clusterProfiler)){BiocManager::install("clusterProfiler")}
+if(!require(ChIPseeker)){BiocManager::install("ChIPseeker")}
+if(!require(plyranges)){BiocManager::install("plyranges")}
 library(ChIPseeker)
 library(clusterProfiler)
 ```
 
+## File conversions
+
+These don't seem to be working.
+
+```{r}
+gc()
+list.files("data")
+Cold_Pol <- readPeakFile("data/ChIP/4-Rpb1-CTD_S14_L001_treat_pileup.bdg")
+#head(Cold_Pol)
+gc()
+write_bed(Cold_Pol, "data/ChIP/4-Rpb1-CTD_S14_L001_treat_pileup.bed", index = F)
+```
+
+Maybe I should try the narrow peaks?
+
+```{r}
+gc()
+list.files("data")
+TFEB_Cold <- readPeakFile("data/ChIP/4-Rpb1-CTD_S14_L001_treat_pileup.bed")
+```
+
+# Use the annotated peaks file
+
 ```{r}
 list.files("data")
 
-RT_CTD <- read_xlsx("data/4_Rpb1_CTD_peaks_annotated_p.xlsx")
-RT_TFEB <- read_xlsx("data/4_TFEB_peaks_annotated_p.xlsx")
-Cold_CTD <- read_xlsx("data/10_Rpb1_CTD_peaks_annotated_p.xlsx")
-Cold_TFEB <- read_xlsx("data/10_TFEB_peaks_annotated_p.xlsx")
+RT_CTD <- read_xlsx("data/ChIP/4_Rpb1_CTD_peaks_annotated_p.xlsx")
+RT_TFEB <- read_xlsx("data/ChIP/4_TFEB_peaks_annotated_p.xlsx")
+Cold_CTD <- read_xlsx("data/ChIP/10_Rpb1_CTD_peaks_annotated_p.xlsx")
+Cold_TFEB <- read_xlsx("data/ChIP/10_TFEB_peaks_annotated_p.xlsx")
 ```
 
 ```{r}
@@ -81,4 +104,3 @@ p0 <- Cold_only |> filter(Annot_new.x == "Intergenic") |>
          ) + geom_point()
 plotly::ggplotly(p0)
 ```
-
