@@ -101,37 +101,37 @@ dev.off()
 FC <- read_csv("data/Exp33/liverFDR_30.csv")
 features <- read_csv("data/Exp33/2022_0222_Exp30_features_CURATED.csv")
 
-FC$q_val <- adjust_pvalue(FC$p_val, method = "fdr")
-
-
-#### Re-edit 
 my_FC <- FC[,c(1,4:9)]
+my_FC$log_p <- FC$`-log10(p)`
+
 my_feat <- features[,c(1:3, 18:19)]
-names(my_feat)[1:5] <- c("Lipid", "sig_FDR", "diffexpressed",
+names(my_feat)[1:5] <- c("Lipid", "sig_FDR", 
+                         "diffexpressed",
                          "FC", "p_val")
 
-
 my_feat$Lipid <- paste0(my_feat$sig_FDR, "_", my_feat$diffexpressed)
-my_feat$sig_FDR <- ifelse(my_feat$p_val < 0.13, T, F)
-
-my_feat$diffexpressed <- ifelse(my_feat$sig_FDR == T & my_feat$FC > 1, "UP", "DOWN")
-
-my_feat$diffexpressed <- ifelse(my_feat$sig_FDR == F, "NO", my_feat$diffexpressed)
-
+my_feat$log_p <- -log10(my_feat$p_val)
 my_feat$delabel <- NA
 my_feat$label <- NA
 
-my_FC$my_color <- ifelse(my_FC$diffexpressed == "UP", "red", "no")
-my_FC$my_color <- ifelse(my_FC$diffexpressed == "DOWN" & my_FC$my_color == "no", "blue", my_FC$my_color)
+# p<0.0066 is significant at q<0.05; set color for my_feat and my_FC before rbind
 
-my_FC$log_p <- FC$`-log10(p)`
-
-
-my_feat$my_color <- ifelse(my_feat$sig_FDR == T, "black", "grey")
-my_feat$log_p <- -log10(my_feat$p_val)
 
 test5 <- rbind(my_feat, my_FC)
 test5$log_FC <- log2(test5$FC)
+
+test5$q_val <- p.adjust(test5$p_val, method = 'fdr')
+test5$sig_FDR <- ifelse(test5$q_val < 0.050, T, F)
+test5$diffexpressed <- ifelse(test5$sig_FDR == T & test5$FC > 1,
+                              "UP", "DOWN")
+
+test5$diffexpressed <- ifelse(test5$sig_FDR == F,
+                              "NO", test5$diffexpressed)
+
+test5$my_color <- ifelse(test5$sig_FDR == T, "black", "grey")
+test5$my_color <- ifelse(test5$diffexpressed == "UP", "red", "no")
+test5$my_color <- ifelse(test5$diffexpressed == "DOWN" & test5$my_color == "no",
+                         "blue", test5$my_color)
 
 
 p0 <- ggplot(test5, aes(x = log_FC, y = log_p, col = my_color)) +
@@ -146,25 +146,24 @@ p0 <- ggplot(test5, aes(x = log_FC, y = log_p, col = my_color)) +
   xlab("Fold Change [Cold/RT]") +
   ylab("-log10(p_value)")
 
-CairoPDF(file = "2022_1020_Unannotated_volcano.pdf", height = 8, width = 10)
-  print(p0)
-dev.off()
-
-#library(DataEditR)
-
+# The 739m/z and 773 m/z that are most significant in this list are BMPs
+install.packages("DataEditR")
+library(DataEditR)
 # Save output to R object & csv file
+# Load and save colors to green
 test_BMPs <- data_edit(test5,
-                        save_as = "BMP_annotated_features.csv")
+                        save_as = "data/Exp33/2023_0316_BMP_annotated_features.csv")
 
-#data_edit()
+test_BMPs <- read_csv("data/Exp33/2023_0316_BMP_annotated_features.csv")
 
-test_BMPs <- read_csv("BMP_annotated_features.csv")
-test_BMPs$BMP <- ifelse(test_BMPs$my_color == "green", 5, 0)
+test_BMPs$BMP <- ifelse(test_BMPs$my_color == "green", 1, 0)
+test_BMPs$my_color <- factor(test_BMPs$my_color, 
+                             levels = c("red", "blue", "grey", "black", "green"))
 
 p0 <- ggplot(test_BMPs, aes(x = log_FC, y = log_p, col = my_color, size = BMP)) +
   geom_point() + 
   scale_color_manual(name = "Legend",
-                     values=c("#7E6148FF", "#4DBBD5FF","#00A087FF", "grey", "black", "#E64B35FF"),
+                     values=c("#E64B35FF", "#4DBBD5FF", "grey", "#7E6148FF","#00A087FF", "black"),
                      labels = c("Feature (q<0.30)", "Decreased",
                                 "BMP Lipid", "Feature (q>0.30)",
                                 "FDR>0.30", "Increased")) +
@@ -218,4 +217,3 @@ dev.off()
 ```
 
 ## Nuc Fract
-
