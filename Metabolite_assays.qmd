@@ -1,0 +1,121 @@
+---
+title: "Metabolite Assays"
+author: Raghav Jain
+format: html
+editor: visual
+---
+
+# 1. Load Packages
+
+```{r}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(readxl)){install.packages("readxl")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(RColorBrewer)){install.packages("RColorBrewer")}
+if(!require(ggsci)){install.packages("ggsci")}
+if(!require(scales)){install.packages("scales")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(rstatix)){install.packages("rstatix")}
+
+show_col(pal_frontiers("default")(10))
+pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+```
+
+# 2. Exp 45 Ketone Body
+
+```{r}
+mdat <- read_xlsx("data/Met_assays/2023_0321_Exp45_Ketone_final.xlsx", sheet = "Final")
+
+mdat$Condition <- factor(mdat$Condition, levels = c("Con-RT", "Con-Cold",
+                                                    "KD-RT", "KD-Cold")
+                         )
+mdat$Genotype <- gsub("-.*", "", mdat$Condition)
+
+p0 <- ggbarplot(data = mdat, x = "Condition", y = "Conc_mM", fill = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.35,
+                            binwidth = 0.05*min(mdat$Conc_mM,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.9)
+          ) +
+  scale_y_continuous(limits = c(0, 1.25), expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Circulating Ketones",
+            ylab = "BHB (mM)", xlab = "Group") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(Conc_mM ~ Condition, ref.group = "Con-RT") |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max") 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p", 
+  tip.length = 0.02, size = 4,
+  hide.ns = F)
+
+CairoPDF(file = "output/Fig4/Fig4C_Exp45_ketone.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+# 3. Exp 45 CTT
+
+```{r}
+mdat <- read_xlsx("data/Exp45/Exp_45_data.xlsx", sheet = "Sheet2")
+
+temp <- mdat |> select(`Con or KD`, `Exp ID #`, RT_Cold, `T-0h`:`T-6h`)
+temp <- temp |> 
+  group_by(`Con or KD`, RT_Cold) |>
+  pivot_longer(cols = starts_with("T"),
+               names_to = "Time", 
+               values_to = "Temp")
+
+temp_sum <- temp |> 
+  group_by(`Con or KD`, RT_Cold, Time) |>
+  summarise(
+    mean = mean(Temp, na.rm = T),
+    sd = sd(Temp,na.rm = T)
+  )
+  
+temp_sum$group <- paste0(temp_sum$`Con or KD`, "_", temp_sum$RT_Cold)
+temp_sum$group <- factor(temp_sum$group, 
+                         levels = c("Con_RT", "Con_Cold",
+                                    "KD_RT", "KD_Cold"))
+
+p0 <- temp_sum |> ggplot(aes(x=Time, y=mean, group=group, color=group, shape =`Con or KD`)) + 
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.1, 
+                position=position_dodge(0.00)) +
+  geom_line() + geom_point(size = 3) +
+  scale_color_manual(values = c("#D51317", "#164194", 
+                                "#F39200FF", "#31B7BCFF")
+                     ) +
+  scale_x_discrete(labels = c("0", "1", "2", "3", "4", "5", "6"), expand = c(0.02, 0.0)) +
+  xlab("Time (h)") +
+  ylab("Core temperature (C)") +
+  ggtitle("Cold Tolerance Test", 
+          subtitle = "Male B6 mice given AAV8 with eGFP-shRNA containing scramble or TFEB target sequence.") +
+  theme_bw(base_size = 16, base_family = "Arial") + 
+  theme(text = element_text(face = "bold")
+        )
+  
+
+CairoPDF(file = "output/Fig4/Fig4A_Exp45__CTT.pdf", height = 8, width = 10)
+  print(p0)
+dev.off()
+```
+

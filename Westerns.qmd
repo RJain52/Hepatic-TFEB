@@ -5,58 +5,124 @@ format: html
 editor: visual
 ---
 
-# Packages
+# 1. Packages
 
 ```{r}
 #| echo: false
-#| library(tidyverse)
-library(ggpubr)
-library(rstatix)
-library(readxl)
-library(Cairo)
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(readxl)){install.packages("readxl")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(rstatix)){install.packages("rstatix")}
+if(!require(ggsci)){install.packages("ggsci")} 
+pal_33 <- c("#D51317", "#164194")
 ```
 
-# Load data
+# 2. Exp 33 General
+
+gel01 sheet 2 = LAMP2, sheet 4 = LIPA; gel02 sheet 2 = LYPLA3
 
 ```{r}
-mdat <- read_xlsx("2022_0525_Quant.xlsx", sheet = 4)
+mdat <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 2)
+mdat2 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 4)
+mdat$Protein <- "LAMP2"
+mdat2$Protein <- "LIPA"
+
+names(mdat)[3] <- "Target"
+names(mdat)[5] <- "Ratio"
+names(mdat2)[3] <- "Target"
+mdat <- rbind(mdat, mdat2)
+
+names(mdat)[2] <- "Treatment"
+mdat$Treatment <- factor(mdat$Treatment, levels = c("RT", "Cold"))
+
+p0 <- ggbarplot(mdat, x = "Protein", y = "Ratio", 
+                add = c("mean_sd", "dotplot"), 
+                color = "Treatment", fill = "Treatment", 
+                add.params = list(width = 0.35,
+                                  binwidth = 0.75*min(mdat$Ratio, na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.5,
+                alpha = 0.9) +
+  scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio, na.rm = T)
+                                ),
+                     expand = c(0.0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_33, legend = "right", legend.title = "Temperature", 
+            title = "Protein signal in RT versus Cold (6h)",  
+            xlab = "Treatment", ylab = "Band Intensity (normalized to beta-actin)") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  group_by(Protein) |>
+  t_test(Ratio ~ Treatment) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Protein", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p", vjust = -0.1,
+  bracket.nudge.y = 0.05,
+  tip.length = 0.02, 
+  hide.ns = F)
+
+p3 <- p2 + theme_bw(base_size = 16) +
+  scale_color_manual(values = c("black", "black"))
+print(p3)
+
+CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen.pdf", height = 8, width = 10)
+  print(p3)
+dev.off()
+```
+
+# 3. TFEB nuclear fractionation
+
+Exp 33
+
+```{r}
+mdat <- read_xlsx("data/Westerns/2022_0525_Quant.xlsx", sheet = 4)
 mdat$Condition <- factor(mdat$Condition, levels = c("RT", "Cold"))
 names(mdat)[2] <- "Treatment"
 
-mdat %>% ggplot(aes(x = Treatment, y = Ratio, fill = Treatment)) 
-
 p0 <- ggbarplot(mdat, x = "Treatment", y = "Ratio", 
-                add = c("mean_se", "dotplot"), color = "Treatment", fill = "Treatment", 
+                add = c("mean_sd", "dotplot"), color = "Treatment", fill = "Treatment", 
                 add.params = list(width = 0.35, 
-                                  binwidth = .18*min(mdat$Ratio, na.rm = T)),
-                alpha = 0.85, position = position_dodge(0.8), size = 0.5) +
+                                  binwidth = .13*min(mdat$Ratio, na.rm = T)),
+                alpha = 0.90, position = position_dodge(0.8), size = 0.5) +
   scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio, na.rm = T)),
                      expand = c(0,0))
 
-p1 <- ggpar(p0, palette = "npg", legend = "right", legend.title = "Temperature", 
+p1 <- ggpar(p0, palette = pal_33, legend = "right", legend.title = "Temperature", 
             title = "Nuclear TFEB in RT versus Cold (6h)",  
             xlab = "Treatment", ylab = "TFEB Intensity (Nuclear/Cytosolic)") + 
       theme_bw(base_size = 16) + 
       theme(text = element_text(face = "bold", color = "black"))
 
-stat.test <- mdat %>%
-  na.omit() %>%
-  t_test(Ratio ~ Treatment) %>%
-  adjust_pvalue(method = "none") %>%
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(Ratio ~ Treatment) |>
+  adjust_pvalue(method = "none") |>
   add_significance("p")
 
 stat.test$p.adj.signif <- stat.test$p.signif
-stat.test <- stat.test %>%
-  na.omit() %>%
+stat.test <- stat.test |>
+  na.omit() |>
   add_xy_position(fun = "max", "Treatment", dodge = 0.8) 
 
-p2 <- p1 + stat_pvalue_manual(
-  stat.test, tip.length = 0.02, hide.ns = F)
+p2 <- p1 + stat_pvalue_manual(stat.test, label = "p",
+                              size = 4,
+                              tip.length = 0.02, 
+                              hide.ns = F)
 
-p3 <- p2
+p3 <- p2 + scale_color_manual(values = c("black", "black"))
 print(p3)
 
-CairoPDF("2022_1020_TFEB_nuclear_WB_Comp.pdf", height = 10, width = 8)
+CairoPDF("output/Fig2/Fig2E_TFEB_nuclear_WB_Comp.pdf", height = 10, width = 8)
   print(p3)
 dev.off()
 

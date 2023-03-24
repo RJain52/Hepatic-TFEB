@@ -1,0 +1,573 @@
+---
+title: "Lipidomics_ex45"
+author: "Raghav Jain"
+format: html
+editor: visual
+---
+
+# 1. Load Packages
+
+```{r}
+#| echo: false
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(RColorBrewer)){install.packages("RColorBrewer")}
+if(!require(ggsci)){install.packages("ggsci")}
+if(!require(scales)){install.packages("scales")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(rstatix)){install.packages("rstatix")}
+if(!require(DataEditR)){install.packages("DataEditR")}
+if(!require(ggbreak)){install.packages("ggbreak")}
+if(!require(VennDiagram)){install.packages("VennDiagram")}
+if(!require(futile.logger)){install.packages("futile.logger")}
+futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
+pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+```
+
+# 2. Calculate lipid sums
+
+Can skip after running code 1x
+
+```{r}
+mdat <- read_csv("data/Exp45/2023_0213_TFEB_KD_Liver_nmol_g.csv")
+
+mydata1 <- mdat %>%
+  mutate_if(is.numeric, ~replace(., is.na(.), 0)
+            )
+
+mydata1$`Total ACar` <- rowSums(mydata1[,grep('ACar', colnames(mydata1))])
+mydata1$`Total Cer` <- rowSums(mydata1[,grep('Cer', colnames(mydata1))]) - rowSums(mydata1[,grep('HexCer', colnames(mydata1))])
+mydata1$`Total CL` <- rowSums(mydata1[,grep('CL', colnames(mydata1))])
+mydata1$`Total DG` <- rowSums(mydata1[,grep('\\bDG\\b', colnames(mydata1))])
+mydata1$`Total EtherPC` <- rowSums(mydata1[,grep('EtherPC', colnames(mydata1))])
+mydata1$`Total EtherPE` <- rowSums(mydata1[,grep('EtherPE', colnames(mydata1))])
+mydata1$`Total FA` <- rowSums(mydata1[,grep('\\bFA\\b', colnames(mydata1))])
+mydata1$`Total FFA` <- rowSums(mydata1[,grep('FA', colnames(mydata1))]) 
+mydata1$`Total GM3` <- rowSums(mydata1[,grep('\\bGM3\\b', colnames(mydata1))])
+mydata1$`Total HBMP` <- rowSums(mydata1[,grep('\\bHBMP\\b', colnames(mydata1))])
+mydata1$`Total HexCer` <- rowSums(mydata1[,grep('HexCer', colnames(mydata1))])
+mydata1$`Total LPC` <- rowSums(mydata1[,grep('LPC', colnames(mydata1))])  
+mydata1$`Total LPE` <- rowSums(mydata1[,grep('LPE', colnames(mydata1))])  
+mydata1$`Total LPG` <- rowSums(mydata1[,grep('LPG', colnames(mydata1))])  
+mydata1$`Total LPI` <- rowSums(mydata1[,grep('LPI', colnames(mydata1))])  
+mydata1$`Total LPS` <- rowSums(mydata1[,grep('LPS', colnames(mydata1))])
+
+mydata1$`Total PA` <- rowSums(mydata1[,grep('\\bPA\\b', colnames(mydata1))])  
+mydata1$`Total PC` <- rowSums(mydata1[,grep('\\bPC\\b', colnames(mydata1))])  
+mydata1$`Total PE` <- rowSums(mydata1[,grep('\\bPE\\b', colnames(mydata1))]) 
+mydata1$`Total PI` <- rowSums(mydata1[,grep('\\bPI\\b', colnames(mydata1))])
+mydata1$`Total PS` <- rowSums(mydata1[,grep('\\bPS\\b', colnames(mydata1))])
+
+mydata1$`Total SM` <- rowSums(mydata1[,grep('\\SM\\b', colnames(mydata1))]) 
+mydata1$`Total TG` <- rowSums(mydata1[,grep('TG', colnames(mydata1))])
+
+mydata1$`Total OxPL` <- rowSums(mydata1[,grep('Ox', colnames(mydata1))])
+
+my_PPL <- c("BMP", "CL",  "HBMP", "EtherPC", "EtherPE", "LPC", "LPE", "LPG",
+            "LPI", "LPC", "PA", "PC", "PE", "PI", "PS")
+mydata1$`Total PPL` <- rowSums(mydata1[,grep(paste(my_PPL, collapse = "|"),
+                                             colnames(mydata1))])
+
+my_GL <- c("DG","TG")
+mydata1$`Total GL` <- rowSums(mydata1[,grep(paste(my_GL, collapse = "|"),
+                                             colnames(mydata1))])
+
+my_SPL <- c("Cer", "GM3", "SM")
+mydata1$`Total SPL` <- rowSums(mydata1[,grep(paste(my_SPL, collapse = "|"),
+                                             colnames(mydata1))])
+
+mydata1$Total_lipid <- rowSums(mydata1[,5:681])
+
+## Screen for outliers
+ggbarplot(mydata1, x = "Genotype", y = "Total_lipid", color = "Temp", fill = "Temp",
+                add = c("mean_sd", "dotplot"), error.plot = "errorbar", position = position_dodge(0.8),
+                alpha = 0.85, size = 0.15)
+
+# Remove sample 12
+mydata1 <- mydata1 |> filter(!Name == 12)
+
+write_csv(mydata1, "data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
+```
+
+# 3. Lipid sums
+
+Subclasses
+
+```{r}
+mdat <- read_csv("data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
+
+mdat1 <- mdat |> select(Name:Genotype, `Total ACar`:`Total OxPL`)
+
+mdat1 <- mdat1 |> pivot_longer(-c(Name:Genotype),
+                               names_to = "Subclass",
+                               values_to = "nmol_g")
+
+mdat1 <- mdat1 |> filter(Subclass %in% c("Total Cer", "Total HexCer")
+                         )
+
+mdat1$Condition <- paste0(mdat1$Genotype, "_", mdat1$Temp)
+mdat1$Condition <- factor(mdat1$Condition,
+                          levels = c("Con_RT", "Con_Cold",
+                                     "KD_RT", "KD_Cold")
+                          )
+
+stat.test <- mdat1 |>
+  na.omit() |>
+  group_by(Subclass) |>
+  t_test(nmol_g ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+subclass_sig <- stat.test[stat.test$p < 0.05,]$Subclass
+
+mdat2 <- mdat1 |> filter(Subclass %in% subclass_sig)
+mdat2 <- mdat2 |> filter(Subclass == "Total TG")
+mdat2 <- mdat2 |> filter(Subclass == "Total ACar")
+mdat2 <- mdat2 |> filter(Subclass == "Total FA")
+
+mdat2 <- mdat1 |> filter(Subclass == "Total SM")
+
+p0 <- ggbarplot(mdat2, x = "Subclass", y = "nmol_g",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat2$nmol_g, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.5*max(mdat2$nmol_g, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_45, legend = "top",
+            legend.title = "Condition", title = "Total SM",
+            xlab = "Total SM",
+            ylab = "nmol/g liver") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat2 |>
+  na.omit() |>
+  group_by(Subclass) |>
+  t_test(nmol_g ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Subclass", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              step.increase =,
+                              bracket.nudge.y = 0,#-50000,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black",
+                                "black", "black")
+                     )
+p2
+
+CairoPDF(file = "output/Fig4/SFig4F_Exp45_liver_HexCer_species.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+```
+
+# 4. BMP analysis
+
+Exp 45 liver KD
+
+```{r}
+mdat <- read_csv("data/Exp45/2023_0211_TFEB_KD_ng_lipid_mg_tissue.csv")
+mdat$Temp <- factor(mdat$Temp, levels = c("RT", "Cold"))
+mdat$Condition <- paste0(mdat$Genotype, "_", mdat$Temp)
+mdat$Condition <- factor(mdat$Condition, levels = c("Con_RT", "Con_Cold", 
+                                                    "KD_RT", "KD_Cold")
+                         )
+
+mdat <- mdat |> select(ID:Genotype, Condition,
+                       order(colnames(mdat)
+                             ),
+                       total_BMP:total_PG
+                       )
+```
+
+## Total BMP/PG
+
+```{r}
+p0 <- ggbarplot(mdat, x = "Condition", y = "total_BMP",
+                add = c("mean_sd", "dotplot"),
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .020*max(mdat$total_BMP, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8),
+                size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.75*max(mdat$total_BMP, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_45, legend = "right", 
+            legend.title = "Condition", 
+            title = "Total BMP",  
+            xlab = "Condition", 
+            ylab = "ng lipid/mg tissue")
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(total_BMP ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "max", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p", 
+  size = 4,
+  step.increase = 0.12,
+  bracket.nudge.y = 0,
+  tip.length = 0.02, hide.ns = F)
+
+p3 <- p2 +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  scale_color_manual(values = c("black", "black",
+                                "black", "black")
+                     )
+
+CairoPDF(file = "output/Fig4/Fig4D_Exp45_total_BMP.pdf", height = 10, width = 10)
+  print(p3)
+dev.off()
+```
+
+## Hepatic BMP species
+
+Compare species increased in Con-RT versus Con-Cold, and KD-RT versus KD-Cold
+
+```{r}
+mdat2 <- mdat |> select(ID:Condition, `BMP 16:0_16:0`:`BMP 22:6_22:6`)
+mdat3 <- mdat2 |> pivot_longer(-c(ID, Temp, Genotype, Condition), 
+                               names_to = "Lipid",
+                               values_to = "value")
+mdat3$Lipid <- gsub("BMP ", "", mdat3$Lipid)
+
+mdat4 <- mdat3 |> filter(Genotype == "KD")
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+KD_sig <- stat.test[stat.test$p < 0.05,]$Lipid
+
+mdat5 <- mdat3 |> filter(Genotype == "Con")
+
+stat.test <- mdat5 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+Con_sig <- stat.test[stat.test$p < 0.05,]$Lipid
+
+KD_unique <- KD_sig[!KD_sig %in% Con_sig]
+Both <- KD_sig[KD_sig %in% Con_sig]
+
+# High
+Both_high <- c("18:1_18:2", "18:2_18:2", 
+               "18:2_20:4", "18:3_22:6",
+               "20:4_20:5")
+```
+
+Continues from previous section
+
+```{r}
+# Different in cold regardless of Genotype
+mdat4 <- mdat3 |> filter(Lipid %in% Both_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 2.0*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_45, legend = "top",
+            legend.title = "Condition", 
+            title = "Liver BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        ) +
+  scale_color_manual(values = c("black", "black", 
+                                "black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = -0.5,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+CairoPDF(file = "output/Fig4/Fig4E_BMP_species_both_high.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+
+# less abundant, both
+mdat4 <- mdat3 |> filter(Lipid %in%Both, !Lipid %in% Both_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 2.0*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_45, legend = "top",
+            legend.title = "Condition", 
+            title = "Liver BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        ) +
+  rotate_x_text(angle = 45) +
+  scale_color_manual(values = c("black", "black", 
+                                "black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+                     
+
+CairoPDF(file = "output/Fig4/Fig4E_BMP_species_both_low.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+
+# Uniquely different with KD
+KD_high <- c("18:2_22:6", "20:5_22:6")
+mdat4 <- mdat3 |> filter(Lipid %in% KD_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 2.0*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_45, legend = "top",
+            legend.title = "Condition", 
+            title = "Liver BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        ) +
+  rotate_x_text(angle = 45)
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black", 
+                                "black", "black")
+                     )
+p2
+
+CairoPDF(file = "output/Fig4/Fig4E_BMP_species_KD_only_high.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+
+# Unique, low species in KD
+mdat4 <- mdat3 |> filter(Lipid %in% KD_unique, !Lipid %in% KD_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 2.0*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_45, legend = "top",
+            legend.title = "Condition", 
+            title = "Liver BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        ) +
+  rotate_x_text(angle = 45)
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black", 
+                                "black", "black")
+                     )
+p2
+
+CairoPDF(file = "output/Fig4/Fig4E_BMP_species_KD_only_low.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+
+# not different due to temp
+
+mdat4 <- mdat3 |> filter(!Lipid %in% KD_unique, !Lipid %in% Both)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.5*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_45, legend = "top",
+            legend.title = "Condition", 
+            title = "Liver BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        ) +
+  rotate_x_text(angle = 45)
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black", 
+                                "black", "black")
+                     )
+p2
+
+CairoPDF(file = "output/Fig4/SFig4E_BMP_species_not_diff.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+```

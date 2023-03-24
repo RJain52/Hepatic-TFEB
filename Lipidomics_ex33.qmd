@@ -17,7 +17,10 @@ if(!require(ggsci)){install.packages("ggsci")}
 if(!require(scales)){install.packages("scales")}
 if(!require(Cairo)){install.packages("Cairo")}
 if(!require(rstatix)){install.packages("rstatix")}
-show_col(pal_npg("nrc", alpha = 0.8)(10))
+if(!require(DataEditR)){install.packages("DataEditR")}
+if(!require(ggbreak)){install.packages("ggbreak")}
+
+pal_33 <- c("#D51317", "#164194")
 ```
 
 # 2. Untargeted traces - Pooled
@@ -93,9 +96,32 @@ CairoPDF(file = "output/Fig1/Fig1A_Final_wide.pdf", height = 10, width = 16)
 dev.off()
 ```
 
-# 3. Volcano Plot
+# 3. Pie Chart
 
-## Exp. 33 volcano plot
+Identified and unidentified features
+
+```{r}
+b <- data.frame(x = c(712, 1233))
+
+pie(b$x, 
+    labels = c("Identified Lipids (712 = 36.6%)", "Lipid-like features (1233 = 63.4%)"),
+    col = c("#e2725b","grey90"),
+    main = "Liver Lipidomics Pie Chart")
+
+library(Cairo)
+CairoPDF(file = "output/Fig1/Fig1B_Feature_comp.pdf", height = 8, width = 8)
+  pie(b$x, 
+    labels = c("Identified Lipids (712 = 36.6%)", "Lipid-like features (1233 = 63.4%)"),
+    col = c("#e2725b","grey90"),
+    main = "Liver Lipidomics Pie Chart")
+dev.off()
+```
+
+# 4. Volcano Plot
+
+## Exp. 30 volcano plot
+
+Using previously published data, we picked out highly signficantly features increased during cold exposure in the liver. Upon examination, we determined these features to be BMP lipids.
 
 ```{r}
 FC <- read_csv("data/Exp33/liverFDR_30.csv")
@@ -115,7 +141,12 @@ my_feat$delabel <- NA
 my_feat$label <- NA
 
 # p<0.0066 is significant at q<0.05; set color for my_feat and my_FC before rbind
+my_feat$my_color <- ifelse(my_feat$p_val < 0.0066, "black", "grey")
 
+my_FC$my_color <- ifelse(my_FC$diffexpressed == "UP" & my_FC$p_val < 0.0066, 
+                         "red", "brown")
+my_FC$my_color <- ifelse(my_FC$diffexpressed == "DOWN" & my_FC$p_val < 0.0066 & my_FC$my_color == "brown",
+                         "blue", my_FC$my_color)
 
 test5 <- rbind(my_feat, my_FC)
 test5$log_FC <- log2(test5$FC)
@@ -127,12 +158,6 @@ test5$diffexpressed <- ifelse(test5$sig_FDR == T & test5$FC > 1,
 
 test5$diffexpressed <- ifelse(test5$sig_FDR == F,
                               "NO", test5$diffexpressed)
-
-test5$my_color <- ifelse(test5$sig_FDR == T, "black", "grey")
-test5$my_color <- ifelse(test5$diffexpressed == "UP", "red", "no")
-test5$my_color <- ifelse(test5$diffexpressed == "DOWN" & test5$my_color == "no",
-                         "blue", test5$my_color)
-
 
 p0 <- ggplot(test5, aes(x = log_FC, y = log_p, col = my_color)) +
   geom_point() + 
@@ -147,28 +172,55 @@ p0 <- ggplot(test5, aes(x = log_FC, y = log_p, col = my_color)) +
   ylab("-log10(p_value)")
 
 # The 739m/z and 773 m/z that are most significant in this list are BMPs
-install.packages("DataEditR")
-library(DataEditR)
 # Save output to R object & csv file
 # Load and save colors to green
 test_BMPs <- data_edit(test5,
-                        save_as = "data/Exp33/2023_0316_BMP_annotated_features.csv")
+                        save_as = "data/Exp33/2023_0317_BMP_annotated_features.csv")
 
-test_BMPs <- read_csv("data/Exp33/2023_0316_BMP_annotated_features.csv")
+test_BMPs <- read_csv("data/Exp33/2023_0317_BMP_annotated_features.csv")
 
-test_BMPs$BMP <- ifelse(test_BMPs$my_color == "green", 1, 0)
+test_BMPs$BMP <- ifelse(test_BMPs$my_color == "green", "shape16", "shape01")
+test_BMPs$BMP <- factor(test_BMPs$BMP, levels = c("shape01", "shape16"))
+test_BMPs$my_fill <- test_BMPs$my_color
+test_BMPs$my_color <- ifelse(test_BMPs$my_color == "green", "black", test_BMPs$my_color)
 test_BMPs$my_color <- factor(test_BMPs$my_color, 
-                             levels = c("red", "blue", "grey", "black", "green"))
+                             levels = c("red", "blue", "brown", "black", "grey", "green"))
+test_BMPs$my_fill <- factor(test_BMPs$my_fill, 
+                             levels = c("red", "blue", "brown", "black", "grey", "green"))
 
-p0 <- ggplot(test_BMPs, aes(x = log_FC, y = log_p, col = my_color, size = BMP)) +
-  geom_point() + 
+my_pal <- alpha(c("#E64B35FF", "#4DBBD5FF", "#7E6148FF", "black", "grey", "#00A087FF"), 0.9)
+
+p0 <- ggplot(test_BMPs, aes(x = log_FC, y = log_p)) +
+  geom_point(aes(col = my_fill, fill = my_color),
+             size = 1.2, stroke = 1.0, shape = 21
+             ) + 
+  scale_fill_manual(name = "Legend",
+                     values = my_pal,
+                     labels = c("Increased", "Decreased", "q>0.05",
+                                "Feature (q<0.05)", "Feature (q>0.05)",
+                                "BMP Lipid"
+                                )
+                     ) +
   scale_color_manual(name = "Legend",
-                     values=c("#E64B35FF", "#4DBBD5FF", "grey", "#7E6148FF","#00A087FF", "black"),
-                     labels = c("Feature (q<0.30)", "Decreased",
-                                "BMP Lipid", "Feature (q>0.30)",
-                                "FDR>0.30", "Increased")) +
-  scale_x_continuous(limits = c(-4, 4)) +
-  scale_y_continuous(expand = c(0, 0.2)) +
+                     values = my_pal,
+                     labels = c("Increased", "Decreased", "q>0.05",
+                                "Feature (q<0.05)", "Feature (q>0.05)", 
+                                "BMP Lipid")
+                     ) +
+  scale_x_continuous(limits = c(-4, 4)
+                     ) +
+  scale_y_continuous(limits = c(0, 6.5), expand = c(0.01, 0)
+                     ) +
+  geom_hline(yintercept = 1.301,              # dashed line for p<0.05
+             linetype = "dashed",
+             linewidth = 0.5) +
+  geom_label(aes(x = 3.6, y = 1.301,          # text label for line signifying p-value
+                 label = "P<0.05",
+                 vjust = -0.5),
+             colour = "black", label.size = NA) +
+  geom_vline(xintercept = 0.0,                # dashed line for FC = 0
+             linetype = "dashed",
+             linewidth = 0.5) +
   theme_bw(base_size = 16, base_family = 'Arial') +
   theme(text = element_text(colour = "black", face = "bold")) +
   ggtitle("Unannotated features") +
@@ -176,44 +228,955 @@ p0 <- ggplot(test_BMPs, aes(x = log_FC, y = log_p, col = my_color, size = BMP)) 
   ylab("-log10(p_value)")
 p0
 
-
-CairoPDF(file = "2022_1020_BMP_annotated_volcano.pdf", height = 8, width = 10)
+CairoPDF(file = "output/Fig1/Fig1C_volcano.pdf", height = 8, width = 10)
   print(p0)
 dev.off()
-
-getwd()
-  
-get_palette(palette = "npg", 7)
-show_col(pal_npg("nrc")(10))
-
-
-
-
-
 ```
 
-## Venn Diagram
+# 5. Exp 33 BMP Liver
+
+Load in data
 
 ```{r}
-###
-#Venn
-a = table(is.na(test5$delabel))
+Targeted <- read_csv("data/Exp33/2023_0317_Exp33_BMP_Liver.csv")
 
-b <- data.frame(x = c(712, 1233))
+Targeted$Total_BMP <- rowSums(Targeted[, grepl("BMP", names(Targeted))])
+Targeted$Total_PG <- rowSums(Targeted[, grepl("PG", names(Targeted))])
 
-pie(b$x, 
-    labels = c("Identified Lipids (712 = 36.6%)", "Lipid-like features (1233 = 63.4%)"),
-    col = c("#e2725b","grey90"),
-    main = "Liver Lipidomics Pie Chart")
+# Final units in ng lipid/g tissue
+Targeted[,5:ncol(Targeted)] <- 0.150*Targeted[,5:ncol(Targeted)]/Targeted$Lipidomics_mg
 
-library(Cairo)
-CairoPDF(file = "Feature_comp.pdf", height = 8, width = 8)
-  pie(b$x, 
-    labels = c("Identified Lipids (712 = 36.6%)", "Lipid-like features (1233 = 63.4%)"),
-    col = c("#e2725b","grey90"),
-    main = "Liver Lipidomics Pie Chart")
-dev.off()
+mdat1 <- Targeted |> select(Sample, Temp, `BMP 20:5_22:6`:Total_PG)
+mdat1 <- mdat1 |> select(Sample:Temp, 
+                         order(colnames(mdat1)
+                               ),
+                         Total_BMP:Total_PG
+                         )
+
+mdat1$Temp<-factor(mdat1$Temp, levels = c("RT", "Cold"))
 
 ```
 
-## Nuc Fract
+## Total BMP and PG
+
+```{r}
+# Plot Total BMP or PG
+p0 <- ggbarplot(mdat1, x = "Temp", y = "Total_PG",
+                add = c("mean_sd", "dotplot"), fill = "Temp", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .025*max(mdat1$Total_PG, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat1$Total_PG, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Group", title = "Liver total PG lipids",
+            xlab = "Temperature",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat1 |>
+  na.omit() |>
+  t_test(Total_PG ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Temp", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 5.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = F)
+
+CairoPDF(file = "output/Fig1/SFig1C_Liver_total_PG.pdf",
+         height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+## Hepatic BMP species
+
+```{r}
+# Species changes - BMP
+mdat2 <- mdat1 |> select(Sample:Temp, `BMP 16:0_16:0`:`BMP 22:6_22:6`)
+mdat3 <- mdat2 |> pivot_longer(-c(Sample, Temp), 
+                               names_to = "Lipid",
+                               values_to = "value")
+mdat3$Lipid <- gsub("BMP ", "", mdat3$Lipid)
+
+p0 <- ggbarplot(mdat3, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat3$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat3$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Liver BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat3 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 5.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+### Significant species
+BMP_sig <- stat.test[stat.test$p < 0.05,]$Lipid
+
+# Plot most abundant species
+high_BMP <- c("18:1_18:1", "18:1_18:2", "18:1_20:4",
+              "18:2_18:2", "18:2_22:6", "20:5_22:6")
+
+mdat4 <- mdat3 |> filter(Lipid %in% high_BMP)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), fill = "Temp",
+                group = "Temp", col= "Temp",
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35, group = "Temp",
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_33,
+            legend.title = "Temp",
+            xlab = "BMP species",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) + 
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = -0.4,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+CairoPDF(file = "output/Fig1/Fig1E_BMP_species_high.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+
+
+# Lower Abundance, significant species
+mdat4 <- mdat3 |> filter(Lipid %in% BMP_sig)
+mdat4 <- mdat4 |> filter(!Lipid %in% high_BMP)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp",
+            xlab = "BMP species",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) + 
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0.4,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+CairoPDF(file = "output/Fig1/Fig1E_BMP_species_low.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+
+# All other BMPs
+mdat4 <- mdat3 |> filter(!Lipid %in% c(BMP_sig, high_BMP))
+
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .0005*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp",
+            xlab = "BMP species",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) + 
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0.4,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  ggbreak::scale_y_break(breaks = c(2,20), scales = 0.5,
+                         space = 0.05, expand = F)
+p2
+
+CairoPDF(file = "output/Fig1/SFig1B_BMP_species_non_sig.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+```
+
+## Hepatic PG species
+
+Split into low, medium and high abundance. Note that L06 seems to be a high outlier for PG lipids. The BMPs look ok. It might be an IS thing that was off there; I am keeping it in the dataset though as it changes sd but likely not the results of any t-tests.
+
+```{r}
+# Species changes - PG
+mdat2 <- mdat1 |> select(Sample:Temp, `PG 16:0_16:0`:`PG 22:5_22:6`)
+mdat3 <- mdat2 |> pivot_longer(-c(Sample, Temp), 
+                               names_to = "Lipid",
+                               values_to = "value")
+
+p0 <- ggbarplot(mdat3, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat3$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat3$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Liver PG lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat3 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 5.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+# Significant species
+PG_sig <- stat.test[stat.test$p < 0.05,]$Lipid
+
+# High abundance
+mdat3$Lipid <- gsub("PG ", "", mdat3$Lipid)
+high_PG <- c("16:0_16:1", "16:0_18:1", "16:0_18:2",
+             "16:0_20:4", "18:0_18:1", "18:0_18:2")
+
+
+mdat4 <- mdat3 |> filter(Lipid %in% high_PG)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "upper_errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp",
+            xlab = "PG species",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+CairoPDF(file = "output/Fig1/SFig1D_PG_species_high.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+
+# Medium PG
+med_PG <- c("16:0_16:0", "16:0_22:6", "16:0_18:0", 
+            "16:1_22:6", "18:1_18:1", "18:1_18:2",
+            "18:1_20:4", "18:2_18:2", "22:5_22:6")
+
+mdat4 <- mdat3 |> filter(Lipid %in%med_PG)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "upper_errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp",
+            xlab = "PG species",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+CairoPDF(file = "output/Fig1/SFig1D_PG_species_med.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+
+# Low PG
+mdat4 <- mdat3 |> filter(!Lipid %in% c(med_PG, high_PG)
+                         )
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
+                error.plot = "upper_errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp",
+            xlab = "PG species",
+            ylab = "ng lipid/g tissue") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Temp) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 6,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+CairoPDF(file = "output/Fig1/SFig1D_PG_species_low.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+```
+
+# 6. Exp 33 BMP Plasma
+
+100uL plasma was extracted and run after diluting lipid extract in 150uL 100% MeOH. Total BMP and PG.
+
+```{r}
+Targeted <- read_csv("data/Exp33/2023_0320_Exp33_BMP_Plasma.csv")
+
+Targeted$Total_BMP <- rowSums(Targeted[, grepl("BMP", names(Targeted))])
+Targeted$Total_PG <- rowSums(Targeted[, grepl("PG", names(Targeted))])
+
+# Final units in ng lipid/mL plasma
+Targeted[,3:ncol(Targeted)] <- 0.150*Targeted[,3:ncol(Targeted)]/0.100
+
+mdat1 <- Targeted |> select(Sample, Condition, `BMP 20:5_22:6`:Total_PG)
+mdat1 <- mdat1 |> select(Sample:Condition, 
+                         order(colnames(mdat1)
+                               ),
+                         Total_BMP:Total_PG
+                         )
+
+mdat1$Condition <-factor(mdat1$Condition, levels = c("RT", "Cold"))
+```
+
+## Plot Total BMP or PG
+
+```{r}
+p0 <- ggbarplot(mdat1, x = "Condition", y = "Total_BMP",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .025*max(mdat1$Total_BMP, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat1$Total_BMP, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Group", title = "Plasma total BMP lipids",
+            xlab = "Temperature",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat1 |>
+  na.omit() |>
+  t_test(Total_BMP ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Condition", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 4.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = F) +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+CairoPDF(file = "output/Fig1/SFig1E_Plasma_total_BMP.pdf",
+         height = 10, width = 8)
+  print(p2)
+dev.off()
+```
+
+## Plasma BMP species
+
+```{r}
+# Species changes - BMP
+mdat2 <- mdat1 |> select(Sample:Condition, `BMP 16:0_16:0`:`BMP 22:5_22:6`)
+mdat3 <- mdat2 |> pivot_longer(-c(Sample, Condition), 
+                               names_to = "Lipid",
+                               values_to = "value")
+mdat3$Lipid <- gsub("BMP ", "", mdat3$Lipid)
+
+mdat3$Condition <- factor(mdat3$Condition, levels = c("RT", "Cold"))
+
+p0 <- ggbarplot(mdat3, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat3$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat3$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Plasma BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat3 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = 2.0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+# Higher abundance
+BMP_high <- c("16:0_16:0", "16:0_18:1", "16:0_18:2",
+              "16:0_22:6", "18:0_18:3", "18:1_18:1",
+              "18:1_18:2", "18:1_22:6", "18:2_18:2",
+              "18:2_22:6", "20:5_22:6")
+
+mdat4 <- mdat3 |> filter(Lipid %in% BMP_high)
+
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Plasma BMP lipid species",
+            xlab = "BMP species",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 6,
+                              vjust = 0.0,
+                              bracket.nudge.y = -0.4,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black")
+                     )
+p2
+
+CairoPDF(file = "output/Fig1/SFig1F_Plasma_BMP_species_high.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+
+# Lower abundance
+mdat4 <- mdat3 |> filter(!Lipid %in% BMP_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "upper_errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Plasma BMP lipid species",
+            xlab = "BMP species",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 6,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0.25,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black")
+                     )
+p2
+
+CairoPDF(file = "output/Fig1/SFig1F_Plasma_BMP_species_low.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+```
+
+## Plasma PG species
+
+```{r}
+# Species changes - PG
+mdat2 <- mdat1 |> select(Sample:Condition, `PG 16:0_16:0`:`PG 22:5_22:6`)
+mdat3 <- mdat2 |> pivot_longer(-c(Sample, Condition), 
+                               names_to = "Lipid",
+                               values_to = "value")
+mdat3$Lipid <- gsub("PG ", "", mdat3$Lipid)
+
+p0 <- ggbarplot(mdat3, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .015*max(mdat3$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat3$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Plasma PG lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        )
+
+stat.test <- mdat3 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.5,
+                              bracket.nudge.y = -4,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T)
+p2
+
+# Higher abundance PG species
+PG_high <- c("16:0_16:0", "16:0_16:1", "16:0_18:1",
+             "16:0_18:2", "16:0_20:4", "16:0_22:6",
+             "16:1_20:4", "16:1_20:5", "16:1_22:6",
+             "18:0_18:0", "18:0_18:1", "18:1_20:4",
+             "18:1_22:6", "18:2_20:5", "18:2_22:6")
+
+mdat4 <- mdat3 |> filter(Lipid %in% PG_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .005*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Plasma PG lipid species",
+            xlab = "PG species",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = 50,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black"))
+p2
+
+CairoPDF(file = "output/Fig1/SFig1G_Plasma_PG_species_high.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+
+# Lower abundance PG species
+mdat4 <- mdat3 |> filter(!Lipid %in% PG_high)
+
+p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.35,
+                                  binwidth = .005*max(mdat4$value, 
+                                                      na.rm = T)
+                                  ),
+                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+
+p1 <- ggpar(p0, palette = pal_33, legend = "top",
+            legend.title = "Temp", title = "Plasma PG lipid species",
+            xlab = "PG species",
+            ylab = "ng lipid/mL plasma") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        )
+
+stat.test <- mdat4 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
+                              size = 4,
+                              vjust = 0.0,
+                              bracket.nudge.y = 0,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = T) +
+  scale_color_manual(values = c("black", "black"))
+p2
+
+CairoPDF(file = "output/Fig1/SFig1G_Plasma_PG_species_low.pdf", height = 10, width = 12)
+  print(p2)
+dev.off()
+```
