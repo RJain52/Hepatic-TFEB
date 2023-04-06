@@ -19,20 +19,22 @@ pal_33 <- c("#D51317", "#164194")
 ```
 
 # 2. Load data
+
 Use the annotated peaks file
 
 ```{r}
-list.files("data")
+list.files("data/ChIP")
 
-RT_CTD <- read_xlsx("data/ChIP/4_Rpb1_CTD_peaks_annotated_p.xlsx")
-RT_TFEB <- read_xlsx("data/ChIP/4_TFEB_peaks_annotated_p.xlsx")
-Cold_CTD <- read_xlsx("data/ChIP/10_Rpb1_CTD_peaks_annotated_p.xlsx")
-Cold_TFEB <- read_xlsx("data/ChIP/10_TFEB_peaks_annotated_p.xlsx")
+RT_CTD <- read_xlsx("data/ChIP/4_Rpb1_CTD_S14_L002_peaks_annotated_q.xlsx")
+RT_TFEB <- read_xlsx("data/ChIP/4_TFEB_peaks_annotated_q.xlsx")
+Cold_CTD <- read_xlsx("data/ChIP/10_Rpb1_CTD_S16_L002_peaks_annotated_q.xlsx")
+Cold_TFEB <- read_xlsx("data/ChIP/10_TFEB_peaks_annotated_q.xlsx")
 ```
 
 # 3. TSS Distance
 
 TFEB ChIP
+
 ```{r}
 names(RT_TFEB)[1] <- "Peak_ID"
 RT_TFEB <- RT_TFEB |> mutate(sample = "RT")
@@ -51,11 +53,12 @@ gghistogram(mdat2, x = "Distance to TSS",
    rug = FALSE, title = "TFEB ChIP",
    color = "sample", fill = "sample",
    palette = c("#E7B800", "#00AFBB"),
-   facet.by = "sample"
+   facet.by = "sample", scales = "free"
    )
 ```
 
 CTD
+
 ```{r}
 names(RT_CTD)[1] <- "Peak_ID"
 RT_CTD <- RT_CTD |> mutate(sample = "RT")
@@ -75,24 +78,162 @@ gghistogram(mdat2, x = "Distance to TSS",
    rug = FALSE, title = "RNA Pol CTD ChIP",
    color = "sample", fill = "sample",
    palette = c("#E7B800", "#00AFBB"),
-   facet.by = "sample"
+   facet.by = "sample", scales = "free",
    )
 ```
 
+# Unique genes
+```{r}
+RT <- unique(RT_TFEB$`Gene Name`)
+Cold <- unique(Cold_TFEB$`Gene Name`)
+shared <- RT[RT %in% Cold]
+uni_cold <- Cold[!Cold %in% RT]
+```
 
-
-# 4. Pie charts
-Binding region (Annotation)
 ```{r}
 
 ```
-Gene type
+
+
+# 4. Pie charts
+CTD binding regions (Annotation)
+
+```{r}
+names(RT_CTD)[1] <- "Peak_ID"
+RT_CTD <- RT_CTD |> mutate(sample = "RT")
+names(Cold_CTD)[1] <- "Peak_ID"
+Cold_CTD <- Cold_CTD |> mutate(sample = "Cold")
+
+mdat <- rbind(RT_CTD, Cold_CTD)
+mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
+                      )
+
+mdat1 <- mdat |> select(sample, Annotation, `Gene Type`) |> drop_na()
+mdat1$Annotation <- gsub("[(]","", mdat1$Annotation)
+mdat1$Annotation <- gsub(" N.*","", mdat1$Annotation)
+
+mdat2 <- mdat1 |> filter(sample == "RT") |>
+  count(Annotation)
+
+mdat2$percent <- round(100*mdat2$n/sum(mdat2$n),2)
+mdat2$Annot_label <- paste0(mdat2$Annotation, " (",
+                            mdat2$percent,")"
+                            )
+
+p0 <- ggpie(mdat2, x = "n", label = "Annot_label", fill = "Annotation",
+            color = "white", palette = "lancet", font.family = "Arial",
+            size = 0.5)
+
+p1 <- ggpar(p0, title = paste0("RT CTD (", sum(mdat2$n), " sites)")
+            )
+
+p1
+```
+TFEB binding regions (Annotation)
+
+```{r}
+names(RT_TFEB)[1] <- "Peak_ID"
+RT_TFEB <- RT_TFEB |> mutate(sample = "RT")
+names(Cold_TFEB)[1] <- "Peak_ID"
+Cold_TFEB <- Cold_TFEB |> mutate(sample = "Cold")
+
+mdat <- rbind(RT_TFEB, Cold_TFEB)
+mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
+                      )
+
+mdat1 <- mdat |> select(sample, Annotation, `Gene Type`) |> drop_na()
+mdat1$Annotation <- gsub("[(]","", mdat1$Annotation)
+mdat1$Annotation <- gsub(" N.*","", mdat1$Annotation)
+
+mdat2 <- mdat1 |> filter(sample == "RT") |>
+  count(Annotation)
+
+mdat2$percent <- round(100*mdat2$n/sum(mdat2$n),2)
+mdat2$Annot_label <- paste0(mdat2$Annotation, " (",
+                            mdat2$percent,")"
+                            )
+
+p0 <- ggpie(mdat2, x = "n", label = "Annot_label", fill = "Annotation",
+            color = "white", palette = "lancet", font.family = "Arial",
+            size = 0.5)
+
+p1 <- ggpar(p0, title = paste0("RT TFEB (", sum(mdat2$n), " sites)")
+            )
+
+p1
+
+
+```
+
+CTD binding regions (Gene Type)
+
+```{r}
+names(RT_CTD)[1] <- "Peak_ID"
+RT_CTD <- RT_CTD |> mutate(sample = "RT")
+names(Cold_CTD)[1] <- "Peak_ID"
+Cold_CTD <- Cold_CTD |> mutate(sample = "Cold")
+
+mdat <- rbind(RT_CTD, Cold_CTD)
+mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
+                      )
+
+mdat1 <- mdat |> select(sample, Annotation, `Gene Type`) |> drop_na()
+mdat2 <- mdat1 |> filter(sample == "Cold") |>
+  count(`Gene Type`)
+
+mdat2$percent <- round(100*mdat2$n/sum(mdat2$n),2)
+mdat2$Type_label <- paste0(mdat2$`Gene Type`, " (",
+                            mdat2$percent,"%)"
+                            )
+
+p0 <- ggpie(mdat2, x = "n", label = "Type_label", fill = "Gene Type",
+            color = "white", palette = "lancet", font.family = "Arial",
+            size = 0.5)
+
+p1 <- ggpar(p0, title = paste0("RT CTD (", sum(mdat2$n), " sites)")
+            )
+
+p1
+```
+TFEB binding regions (Gene Type)
+```{r}
+names(RT_TFEB)[1] <- "Peak_ID"
+RT_TFEB <- RT_TFEB |> mutate(sample = "RT")
+names(Cold_TFEB)[1] <- "Peak_ID"
+Cold_TFEB <- Cold_TFEB |> mutate(sample = "Cold")
+
+mdat <- rbind(RT_TFEB, Cold_TFEB)
+mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
+                      )
+
+mdat1 <- mdat |> select(sample, Annotation, `Gene Type`) |> drop_na()
+
+mdat2 <- mdat1 |> filter(sample == "Cold") |>
+  count(`Gene Type`)
+
+mdat2$percent <- round(100*mdat2$n/sum(mdat2$n),2)
+mdat2$Type_label <- paste0(mdat2$`Gene Type`, " (",
+                            mdat2$percent,"%)"
+                            )
+
+p0 <- ggpie(mdat2, x = "n", label = "Type_label", fill = "Gene Type",
+            color = "white", palette = "lancet", font.family = "Arial",
+            size = 0.5)
+
+p1 <- ggpar(p0, title = paste0("RT TFEB (", sum(mdat2$n), " sites)")
+            )
+
+p1
+```
+
 
 
 # Old
+
 This code covers analysis of transcription factor EB ChIP-seq data.
 
 http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract https://www.biostars.org/p/274689/ https://hbctraining.github.io/Intro-to-ChIPseq/lessons/05_peak_calling_macs.html
+
 ```{r}
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
