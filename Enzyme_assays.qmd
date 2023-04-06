@@ -85,7 +85,9 @@ dev.off()
 ```
 
 # 3. Glucosylceramidase Assay
+
 Exp 45
+
 ```{r}
 mdat <- read_xlsx("data/Exp45/2023_0324_Exp45_GCase_assay.xlsx", sheet = "Final")
 
@@ -95,6 +97,7 @@ mdat$Treatment <- factor(mdat$Treatment, levels = c("Con_RT", "Con_Cold",
                                                     "KD_RT", "KD_Cold"
                                                     )
                          )
+GCase <- mdat # save for correlation 
 
 p0 <- ggbarplot(mdat, x = "Treatment", y = "Activity_uU_mg", 
                 add = c("mean_sd", "dotplot"), 
@@ -144,5 +147,71 @@ p2 <- p1 + stat_pvalue_manual(
 CairoPDF(file = "output/Fig4/Fig4F_Exp45_GCase.pdf", height = 10, width = 12)
   print(p2)
 dev.off()
+```
+
+## Lipid-enzyme correlation
+Correlate GCase activity to total Cer and HexCer from untargeted data
+```{r}
+# Load in lipid data using separate script and pull key variables
+names(lipids)[1] <- "Sample"
+mdat <- merge(GCase, lipids, by = "Sample")
+
+# Plot Cer and GCase first
+mdat1 <- mdat |> filter(Subclass == "Total Cer")
+
+p0 <- ggscatter(mdat1,                        
+                x = "nmol_g", 
+                y = "Activity_uU_mg",
+                add = "reg.line", 
+                add.params = list(color = "black", fill = "lightgray"),
+                conf.int = T,     
+                palette = pal_45,   
+                color = "Treatment") +                         
+  stat_cor(method = "spearman",
+          label.x = min(mdat1$nmol_g),               
+          p.accuracy = 0.001, r.accuracy = 0.01
+          ) +   
+  xlab("Total ceramides (nmol/g)") +                
+  ylab("GCase activity (pmol/min/mg)") +                     
+  ggtitle("Liver data") +   
+  theme_bw() +                                       
+  theme(legend.position = "right",                        
+        text = element_text(size = 16, 
+                            family = "Arial"),
+        axis.line = element_line(colour = "black")
+        )
+p0
+
+CairoPDF(file = "output/Fig4/Fig4F_GCase_Cer_corr.pdf",
+         height = 8, width = 8)
+  print(p0)
+dev.off()
+
+
+# Plot HexCer and GCase 
+mdat1 <- mdat |> filter(Subclass == "Total HexCer")
+
+p0 <- ggscatter(mdat1,                        
+                x = "nmol_g", 
+                y = "Activity_uU_mg",
+                add = "reg.line", 
+                add.params = list(color = "black", fill = "lightgray"),
+                conf.int = T,     
+                palette = pal_45,   
+                color = "Treatment") +                         
+  stat_cor(method = "spearman",
+          label.x = min(mdat1$nmol_g),               
+          p.accuracy = 0.001, r.accuracy = 0.01
+          ) +   
+  xlab("Total HexCer (nmol/g)") +                
+  ylab("GCase activity (pmol/min/mg)") +                     
+  ggtitle("Liver data") +   
+  theme_bw() +                                       
+  theme(legend.position = "right",                        
+        text = element_text(size = 16, 
+                            family = "Arial"),
+        axis.line = element_line(colour = "black")
+        )
+p0
 ```
 

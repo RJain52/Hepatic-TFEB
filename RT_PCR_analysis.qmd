@@ -1,0 +1,177 @@
+---
+title: "RT-PCR"
+author: "Raghav Jain"
+format: html
+editor: visual
+---
+# 1. Load Packages
+```{r}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(scales)){install.packages("scales")}
+if(!require(readxl)){install.packages("readxl")} 
+if(!require(reshape)){install.packages("reshape")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(rstatix)){install.packages("rstatix")}
+pal_33 <- c("#D51317", "#164194")
+pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+```
+
+# 2. Exp 45 Knockdown transcripts
+```{r}
+# Intial qPCR
+mdat <- read_excel("data/qPCR/2023_0106_qPCR_TFEB_KD_at1.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+# Ketone targets
+mdat <- read_excel("data/qPCR/2023_0120_Exp45 ketone_targets.xlsx",
+                 sheet = 'Results', 
+                 range = "A37:AK377", 
+                 trim_ws = T)
+
+mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
+
+# Remove standard rows
+mdat <- mdat |> filter(Task == "UNKNOWN")
+
+# Subset out the relevant data
+Y <- mdat |> select(`Sample Name`, `Target Name`, 
+                    `CT`, `Quantity Mean`,
+                    `Ct SD`, `Quantity`)   
+
+
+# Convert CT and quantity to number instead of character values
+Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
+                 )
+
+# When the target was not present in the sample, the last 3 columns will have NA
+# Replace NA with value (0) that will pass the filters 
+Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
+                 )
+# Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
+Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90)
+
+# Make gene name factor
+Y$`Target Name` <- as.factor(Y$`Target Name`)
+
+# Normalize to each samples RPS3
+Y <- Y |> group_by(`Sample Name`) |>
+  mutate(norm_quant = Quantity/Quantity[`Target Name`=="RPS3"])
+
+# Remove RPS3
+Y <- Y |> filter(!`Target Name` == "RPS3") |> 
+  droplevels()
+
+Y$Condition <- gsub(" [[:digit:]]+", "", Y$`Sample Name`)
+Y$Condition <- gsub(" ", "_", Y$Condition)
+Y$Condition <- gsub("TFEB_", "", Y$Condition)
+
+Y$Condition <- factor(Y$Condition, 
+                      levels = c("Con_RT", "Con_Cold",
+                                 "KD_RT", "KD_Cold")
+                      )
+
+# Graph stuff
+targets <-as.vector(names(table(Y$`Target Name`)))
+plot_list <- list()
+
+# Define x-axis variable
+a = "Condition"
+
+# Define y-axis variable
+b = "norm_quant"
+
+# Define additional variable related to color (if none, set equal to a)
+c = a
+
+for (i in 1:length(targets)) {
+  temp <- Y |> filter(`Target Name` %in% targets[i]) |>
+    droplevels()
+  
+  p0 <- ggbarplot(temp, x = a, y = b,
+                  add = c("mean_sd", "dotplot"), 
+                  color = a, fill = a, 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2, color = "grey23",
+                  binwidth = 0.01*max(temp$norm_quant, na.rm = T)),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.4*max(temp$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       ) +
+    scale_x_discrete(guide = guide_axis(angle = 45))
+  
+  p1 <- ggpar(p0, palette = pal_45, title = temp$`Target Name`[1],  
+              xlab = "", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black", "black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+  stat.test <- temp |>
+    group_by(`Target Name`) |>
+    t_test(norm_quant ~ Condition) |>
+    adjust_pvalue(method = "none") %>%
+    add_significance("p")
+  
+  stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+  stat.test <- stat.test |> add_xy_position(fun = "mean_sd", x = a, dodge = 0.8)
+
+  p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+    plot_list[[i]] = p2
+
+}
+
+CairoPDF(file = "output/Fig4/2023_0329_Exp45_KD_ketone_all.pdf", height = 10, width = 8)
+  for (i in 1:length(targets)) {
+    print(plot_list[[i]])
+  }
+dev.off()
+
+# TFEB KD Validation
+Y1 <- Y |> filter(`Target Name` == "TFEB") |>
+  droplevels()
+
+p0 <- ggbarplot(Y1, x = "Condition", y = "norm_quant",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Condition", fill = "Condition", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.015*max(Y1$norm_quant, na.rm = T)),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.3*max(Y1$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       ) 
+  
+p1 <- ggpar(p0, palette = pal_45, title = "Exp45 TFEB qPCR",  
+              xlab = "", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black", "black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- Y1 |>
+    group_by(`Target Name`) |>
+    t_test(norm_quant ~ Condition) |>
+    adjust_pvalue(method = "none") %>%
+    add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "mean_sd", x = "Condition", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p.signif",
+  hide.ns = T, size = 8)
+
+p2
+
+CairoPDF(file = "output/Fig4/Fig4A_Exp45_TFEB_qPCR_at2.pdf",
+         height = 8, width = 10)
+  print(p2)
+dev.off()
+```
+

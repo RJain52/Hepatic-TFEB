@@ -4,48 +4,22 @@ format: html
 editor: visual
 ---
 
-# 1. Summary
-
-This code covers analysis of transcription factor EB ChIP-seq data.
-
-http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract https://www.biostars.org/p/274689/ https://hbctraining.github.io/Intro-to-ChIPseq/lessons/05_peak_calling_macs.html
+# 1. Load packages
 
 ```{r, echo=FALSE, warning=FALSE}
 if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(RColorBrewer)){install.packages("RColorBrewer")}
+if(!require(ggsci)){install.packages("ggsci")}
+if(!require(scales)){install.packages("scales")}
+if(!require(Cairo)){install.packages("Cairo")}
 if(!require(readxl)){install.packages("readxl")}
-if (!require("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-if(!require(GO.db)){BiocManager::install("GO.db")}
-if(!require(HDO.db)){BiocManager::install("HDO.db")}
-if(!require(clusterProfiler)){BiocManager::install("clusterProfiler")}
-if(!require(ChIPseeker)){BiocManager::install("ChIPseeker")}
-if(!require(plyranges)){BiocManager::install("plyranges")}
-library(ChIPseeker)
-library(clusterProfiler)
+
+pal_33 <- c("#D51317", "#164194")
 ```
 
-## File conversions
-
-These don't seem to be working.
-
-```{r}
-gc()
-list.files("data")
-Cold_Pol <- readPeakFile("data/ChIP/4-Rpb1-CTD_S14_L001_treat_pileup.bdg")
-#head(Cold_Pol)
-gc()
-write_bed(Cold_Pol, "data/ChIP/4-Rpb1-CTD_S14_L001_treat_pileup.bed", index = F)
-```
-
-Maybe I should try the narrow peaks?
-
-```{r}
-gc()
-list.files("data")
-TFEB_Cold <- readPeakFile("data/ChIP/4-Rpb1-CTD_S14_L001_treat_pileup.bed")
-```
-
-# Use the annotated peaks file
+# 2. Load data
+Use the annotated peaks file
 
 ```{r}
 list.files("data")
@@ -56,7 +30,80 @@ Cold_CTD <- read_xlsx("data/ChIP/10_Rpb1_CTD_peaks_annotated_p.xlsx")
 Cold_TFEB <- read_xlsx("data/ChIP/10_TFEB_peaks_annotated_p.xlsx")
 ```
 
+# 3. TSS Distance
+
+TFEB ChIP
 ```{r}
+names(RT_TFEB)[1] <- "Peak_ID"
+RT_TFEB <- RT_TFEB |> mutate(sample = "RT")
+names(Cold_TFEB)[1] <- "Peak_ID"
+Cold_TFEB <- Cold_TFEB |> mutate(sample = "Cold")
+
+mdat <- rbind(RT_TFEB, Cold_TFEB)
+mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
+                      )
+mdat$`Distance to TSS` <- as.numeric(mdat$`Distance to TSS`)
+mdat1 <- mdat |> select(sample, `Distance to TSS`, `Gene Type`, `Gene Name`, Annotation) |> drop_na()
+
+mdat2 <- mdat1 |> filter(`Distance to TSS` > -10000, `Distance to TSS` < 10000)
+
+gghistogram(mdat2, x = "Distance to TSS",
+   rug = FALSE, title = "TFEB ChIP",
+   color = "sample", fill = "sample",
+   palette = c("#E7B800", "#00AFBB"),
+   facet.by = "sample"
+   )
+```
+
+CTD
+```{r}
+names(RT_CTD)[1] <- "Peak_ID"
+RT_CTD <- RT_CTD |> mutate(sample = "RT")
+names(Cold_CTD)[1] <- "Peak_ID"
+Cold_CTD <- Cold_CTD |> mutate(sample = "Cold")
+
+mdat <- rbind(RT_CTD, Cold_CTD)
+mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
+                      )
+mdat$`Distance to TSS` <- as.numeric(mdat$`Distance to TSS`)
+mdat1 <- mdat |> select(sample, `Distance to TSS`, `Gene Type`, `Gene Name`, Annotation) |> 
+  drop_na()
+
+mdat2 <- mdat1 |> filter(`Distance to TSS` > -10000, `Distance to TSS` < 10000)
+
+gghistogram(mdat2, x = "Distance to TSS",
+   rug = FALSE, title = "RNA Pol CTD ChIP",
+   color = "sample", fill = "sample",
+   palette = c("#E7B800", "#00AFBB"),
+   facet.by = "sample"
+   )
+```
+
+
+
+# 4. Pie charts
+Binding region (Annotation)
+```{r}
+
+```
+Gene type
+
+
+# Old
+This code covers analysis of transcription factor EB ChIP-seq data.
+
+http://bioconductor.org/packages/devel/bioc/vignettes/ChIPseeker/inst/doc/ChIPseeker.html#abstract https://www.biostars.org/p/274689/ https://hbctraining.github.io/Intro-to-ChIPseq/lessons/05_peak_calling_macs.html
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+if(!require(GO.db)){BiocManager::install("GO.db")}
+if(!require(HDO.db)){BiocManager::install("HDO.db")}
+if(!require(clusterProfiler)){BiocManager::install("clusterProfiler")}
+if(!require(ChIPseeker)){BiocManager::install("ChIPseeker")}
+if(!require(plyranges)){BiocManager::install("plyranges")}
+library(ChIPseeker)
+library(clusterProfiler)
+
 RT_CTD$Annot_new <- gsub(" .*", "", RT_CTD$Annotation)
 RT_TFEB$Annot_new <- gsub(" .*", "", RT_TFEB$Annotation)
 RT_only <- merge(RT_CTD, RT_TFEB, by = c("Gene Name", "Annotation"))

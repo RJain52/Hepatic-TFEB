@@ -95,7 +95,10 @@ Subclasses
 
 ```{r}
 mdat <- read_csv("data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
+```
 
+## Ceramides
+```{r}
 mdat1 <- mdat |> select(Name:Genotype, `Total ACar`:`Total OxPL`)
 
 mdat1 <- mdat1 |> pivot_longer(-c(Name:Genotype),
@@ -164,7 +167,7 @@ stat.test <- stat.test |>
 p2 <- p1 + stat_pvalue_manual(label = "p.signif",
                               size = 4,
                               vjust = 0.0,
-                              step.increase =,
+                              step.increase =0.1,
                               bracket.nudge.y = 0,#-50000,
                               stat.test, 
                               tip.length = 0.02, 
@@ -176,6 +179,78 @@ p2
 
 CairoPDF(file = "output/Fig4/SFig4F_Exp45_liver_HexCer_species.pdf", height = 10, width = 12)
   print(p2)
+dev.off()
+```
+
+## FFA, ACar and TG
+
+```{r}
+mdat1 <- mdat |> select(Name:Genotype, `Total ACar`, `Total FFA`, `Total TG`)
+
+mdat1 <- mdat1 |> pivot_longer(-c(Name:Genotype),
+                               names_to = "Subclass",
+                               values_to = "nmol_g")
+
+mdat1$Condition <- paste0(mdat1$Genotype, "_", mdat1$Temp)
+mdat1$Condition <- factor(mdat1$Condition,
+                          levels = c("Con_RT", "Con_Cold",
+                                     "KD_RT", "KD_Cold")
+                          )
+
+mdat1 <- mdat1 |>
+  group_by(Subclass) |>
+  mutate(norm_val = nmol_g/mean(nmol_g[Condition == "Con_RT"])
+         )
+
+stat.test <- mdat1 |>
+  na.omit() |>
+  group_by(Subclass) |>
+  t_test(norm_val ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Subclass", dodge = 0.8) 
+
+p0 <- mdat1 |>
+  ggplot(aes(x=Subclass,                
+             y=norm_val,
+             group = Condition,          
+             fill = Condition)) +
+  scale_fill_manual("Group",   
+                    values = c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+                    ) +
+  geom_boxplot(aes(group = interaction(Condition, Subclass)),  
+               width = 0.5, alpha = 0.9,                  
+               outlier.shape = NA,                        
+               position = position_dodge(width = 0.8)     
+               ) +
+  geom_point(shape = 21,                
+             size = 1,                
+             alpha = 0.7,
+             position=position_jitterdodge(dodge.width = 0.8), 
+             color = "grey30") + 
+  theme(legend.position = "none",                 
+        plot.title = element_text(size = 11)
+        ) +
+  xlab("Subclass") +                                 
+  ylab("Relative amount"
+       ) +
+  scale_y_continuous(limits = c(0, 5), expand = c(0, 0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +  
+  ggtitle("Untargeted lipidomics") +     
+  stat_compare_means(method = "anova", label.y = 4.5) +
+  stat_compare_means(label = "p.signif",            
+                     hide.ns = T, label.y = 4,
+                     method = "t.test")
+p0
+
+CairoPDF(file = "output/Fig4/Fig4D_Exp45_untargeted_subclass.pdf",
+         height = 8, width = 12)
+  print(p0)
 dev.off()
 ```
 
@@ -205,7 +280,7 @@ p0 <- ggbarplot(mdat, x = "Condition", y = "total_BMP",
                 add = c("mean_sd", "dotplot"),
                 color = "Condition", fill = "Condition", 
                 error.plot = "errorbar", 
-                add.params = list(width = 0.35,
+                add.params = list(width = 0.25,
                                   binwidth = .020*max(mdat$total_BMP, 
                                                       na.rm = T)
                                   ),
@@ -245,7 +320,7 @@ p3 <- p2 +
                                 "black", "black")
                      )
 
-CairoPDF(file = "output/Fig4/Fig4D_Exp45_total_BMP.pdf", height = 10, width = 10)
+CairoPDF(file = "output/Fig4/Fig4E_Exp45_total_BMP.pdf", height = 10, width = 12)
   print(p3)
 dev.off()
 ```

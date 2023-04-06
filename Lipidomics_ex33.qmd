@@ -261,30 +261,32 @@ mdat1$Temp<-factor(mdat1$Temp, levels = c("RT", "Cold"))
 
 ```{r}
 # Plot Total BMP or PG
-p0 <- ggbarplot(mdat1, x = "Temp", y = "Total_PG",
+p0 <- ggbarplot(mdat1, x = "Temp", y = "Total_BMP",
                 add = c("mean_sd", "dotplot"), fill = "Temp", 
                 error.plot = "errorbar", 
                 add.params = list(width = 0.35,
-                                  binwidth = .025*max(mdat1$Total_PG, 
+                                  binwidth = .025*max(mdat1$Total_BMP, 
                                                       na.rm = T)
                                   ),
-                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
-  scale_y_continuous(limits = c(0.00, 1.15*max(mdat1$Total_PG, na.rm = T)
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.15*max(mdat1$Total_BMP, na.rm = T)
                                 ),
                      expand = c(0,0)
-                     ) 
-p1 <- ggpar(p0, palette = pal_33, legend = "top",
-            legend.title = "Group", title = "Liver total PG lipids",
-            xlab = "Temperature",
-            ylab = "ng lipid/g tissue") +
-  theme_bw(base_size = 16, base_family = "Arial") +
+                     ) +
+  theme_bw(base_size = 12, base_family = "Arial") +
   theme(text = element_text(face = "bold", 
                             colour = "black")
         )
+p1 <- ggpar(p0, palette = pal_33,
+            title = "Total hepatic BMP lipids",
+            legend = "right",
+            xlab = "Temperature",
+            ylab = "ng lipid/g tissue") 
+
 
 stat.test <- mdat1 |>
   na.omit() |>
-  t_test(Total_PG ~ Temp) |>
+  t_test(Total_BMP ~ Temp) |>
   adjust_pvalue(method = "none") |>
   add_significance("p")
 
@@ -301,8 +303,8 @@ p2 <- p1 + stat_pvalue_manual(label = "p",
                               tip.length = 0.02, 
                               hide.ns = F)
 
-CairoPDF(file = "output/Fig1/SFig1C_Liver_total_PG.pdf",
-         height = 8, width = 8)
+CairoPDF(file = "output/Fig1/Fig1D_Liver_total_BMP.pdf",
+         height = 10, width = 8)
   print(p2)
 dev.off()
 ```
@@ -372,26 +374,24 @@ p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
                 add = c("mean_sd", "dotplot"), fill = "Temp",
                 group = "Temp", col= "Temp",
                 error.plot = "errorbar", 
-                add.params = list(width = 0.35, group = "Temp",
-                                  binwidth = .015*max(mdat4$value, 
+                add.params = list(width = 0.15, group = "Temp",
+                                  binwidth = .012*max(mdat4$value, 
                                                       na.rm = T)
                                   ),
-                position = position_dodge(0.8), size = 0.15) +
+                position = position_dodge(0.8), size = 0.10) +
   scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
                                 ),
                      expand = c(0,0)
                      )
 
 p1 <- ggpar(p0, palette = pal_33,
-            legend.title = "Temp",
-            xlab = "BMP species",
+            title = "Abundant BMP species",
+            legend = "none",
+            xlab = "",
             ylab = "ng lipid/g tissue") +
   theme_bw(base_size = 16, base_family = "Arial") +
   theme(text = element_text(face = "bold", 
-                            colour = "black"),
-        axis.text.x = element_text(angle = 45, vjust = 1,
-                                   hjust = 1,
-                                   size = 12)
+                            colour = "black")
         ) + 
   scale_color_manual(values = c("black", "black")
                      )
@@ -408,7 +408,7 @@ stat.test <- stat.test |>
   na.omit() |>
   add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
 
-p2 <- p1 + stat_pvalue_manual(label = "p",
+p2 <- p1 + stat_pvalue_manual(label = "p.signif",
                               size = 4,
                               vjust = 0.0,
                               bracket.nudge.y = -0.4,
@@ -417,7 +417,7 @@ p2 <- p1 + stat_pvalue_manual(label = "p",
                               hide.ns = T)
 p2
 
-CairoPDF(file = "output/Fig1/Fig1E_BMP_species_high.pdf", height = 10, width = 14)
+CairoPDF(file = "output/Fig1/Fig1E_BMP_species_high.pdf", height = 10, width = 18)
   print(p2)
 dev.off()
 
@@ -429,18 +429,18 @@ mdat4 <- mdat4 |> filter(!Lipid %in% high_BMP)
 p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
                 add = c("mean_sd", "dotplot"), color = "Temp", fill = "Temp", 
                 error.plot = "errorbar", 
-                add.params = list(width = 0.35,
-                                  binwidth = .015*max(mdat4$value, 
+                add.params = list(width = 0.15,
+                                  binwidth = .010*max(mdat4$value, 
                                                       na.rm = T)
                                   ),
-                alpha = 0.9, position = position_dodge(0.8), size = 0.15) +
+                alpha = 0.9, position = position_dodge(0.8), size = 0.05) +
   scale_y_continuous(limits = c(0.00, 1.30*max(mdat4$value, na.rm = T)
                                 ),
                      expand = c(0,0)
                      ) 
 
-p1 <- ggpar(p0, palette = pal_33, legend = "top",
-            legend.title = "Temp",
+p1 <- ggpar(p0, palette = pal_33, legend = "none",
+            title = "Less abundant BMP species",
             xlab = "BMP species",
             ylab = "ng lipid/g tissue") +
   theme_bw(base_size = 16, base_family = "Arial") +
@@ -474,7 +474,7 @@ p2 <- p1 + stat_pvalue_manual(label = "p.signif",
                               hide.ns = T)
 p2
 
-CairoPDF(file = "output/Fig1/Fig1E_BMP_species_low.pdf", height = 10, width = 14)
+CairoPDF(file = "output/Fig1/Fig1E_BMP_species_low.pdf", height = 10, width = 18)
   print(p2)
 dev.off()
 
