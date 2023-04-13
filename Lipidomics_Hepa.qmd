@@ -1,0 +1,382 @@
+---
+title: "Lipidomics_ex45"
+author: "Raghav Jain"
+format: html
+editor: visual
+---
+
+# 1. Load Packages
+
+```{r}
+#| echo: false
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(RColorBrewer)){install.packages("RColorBrewer")}
+if(!require(ggsci)){install.packages("ggsci")}
+if(!require(scales)){install.packages("scales")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(rstatix)){install.packages("rstatix")}
+if(!require(DataEditR)){install.packages("DataEditR")}
+if(!require(ggbreak)){install.packages("ggbreak")}
+if(!require(VennDiagram)){install.packages("VennDiagram")}
+if(!require(futile.logger)){install.packages("futile.logger")}
+futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
+
+show_col(pal_frontiers(palette = c("default"))(10))
+pal_cells <- c("#706F6FFF", "#007B3DFF", "#EFC000FF", "#6F286AFF")
+```
+
+# 2. BMP analysis
+
+Hepa1-6 cells treated with siRNA containing control sequence or targetting a GOI. Overexpression using pBABE vectors.
+## Load data
+```{r}
+mdat <- read_csv("data/Hepa/2022_0401_BMP_Hepa_ng_mg.csv")
+mdat <- mdat |> filter(Media == "DMEM")
+names(mdat)[4] <- "Condition"
+
+mdat$Condition <- factor(mdat$Condition,
+                         levels = c("LacZ", "hTFEB_OE",
+                                    "scramble", "siM6PR",
+                                    "siTFEB")
+                         )
+
+mdat <- mdat |> filter(!is.na(Condition))
+
+mdat$total_BMP <- rowSums(mdat[,grep("BMP", names(mdat))]
+                          )
+mdat$total_PG <- rowSums(mdat[,grep("PG", names(mdat))]
+                         )
+
+mdat <- mdat |> select(ID, Condition, `BMP 20:5-22:6`:total_PG)
+names(mdat) <- gsub("-", "_", names(mdat))
+mdat$Group <- "A"
+
+
+mdat2 <- read_csv("data/Hepa/2023_0211_Hepa_KD_ng_lipid_mg_protein.csv")
+names(mdat2)[2] <- "Condition" 
+mdat2$Condition <- factor(mdat2$Condition, levels = c("scramble_1", "siTFEB_siM6PR",
+                                                 "scramble_2", "siPla2g15")
+                     )
+mdat2 <- mdat2 |> filter(!is.na(Condition))
+
+mdat2$total_BMP <- rowSums(mdat2[,grep("BMP", names(mdat2))]
+                           )
+mdat2$total_PG <- rowSums(mdat2[,grep("PG", names(mdat2))]
+                          )
+
+mdat2 <- mdat2 |> select(ID, Condition, `BMP 20:5_22:6`:total_PG)
+mdat2$ID <- as.character(mdat2$ID)
+mdat2$Group <- "B"
+
+mdat3 <- bind_rows(mdat, mdat2)
+mdat3 <- mdat3 |> select(ID, Condition, Group, 
+                         order(colnames(mdat3)
+                               ),
+                         total_BMP:total_PG
+                         )
+
+mdat3$Condition <- factor(mdat3$Condition, levels = c("LacZ", "hTFEB_OE",
+                                                      "scramble", "siM6PR",
+                                                      "siTFEB", "scramble_1",
+                                                      "siTFEB_siM6PR", "scramble_2",
+                                                      "siPla2g15")
+                          )
+
+mdat3$Group <- factor(mdat3$Group, levels = c("A", "B"))
+```
+
+## Total BMP/PG
+
+TFEB cells
+
+```{r}
+# "LacZ","hTFEB_OE" or "scramble", "siTFEB"
+mdat4 <- mdat3 |> filter(Condition %in% c("scramble", "siTFEB")
+                         ) |>
+  droplevels()
+
+p0 <- ggbarplot(mdat4, x = "Condition", y = "total_BMP",
+                add = c("mean_sd", "dotplot"),
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.20,
+                                  binwidth = .025*max(mdat4$total_BMP, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8),
+                size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.75*max(mdat4$total_BMP, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_cells[c(1,4)], legend = "right", 
+            legend.title = "Condition", 
+            title = "Total BMP",  
+            xlab = "Condition", 
+            ylab = "ng lipid/mg protein")
+
+stat.test <- mdat4 |>
+  t_test(total_BMP ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "max", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p", 
+  size = 4,
+  step.increase = 0.12,
+  bracket.nudge.y = 0,
+  tip.length = 0.02, hide.ns = F)
+
+p3 <- p2 +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+CairoPDF(file = "output/Fig5/Fig5D_Hepa_OE_total_BMP.pdf", height = 10, width = 10)
+  print(p3)
+dev.off()
+```
+
+siPla cells
+
+```{r}
+# 
+mdat4 <- mdat3 |> filter(Condition %in% c("scramble_2","siPla2g15")
+                         ) |>
+  droplevels()
+
+mdat4 <- mdat4 |> filter(!ID == 29)
+
+p0 <- ggbarplot(mdat4, x = "Condition", y = "total_BMP",
+                add = c("mean_sd", "dotplot"),
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.20,
+                                  binwidth = .025*max(mdat4$total_BMP, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8),
+                size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.75*max(mdat4$total_BMP, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_cells[c(1,2)], legend = "right", 
+            legend.title = "Condition", 
+            title = "Total BMP",  
+            xlab = "Condition", 
+            ylab = "ng lipid/mg protein")
+
+stat.test <- mdat4 |>
+  t_test(total_BMP ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "max", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p", 
+  size = 4,
+  step.increase = 0.12,
+  bracket.nudge.y = 0,
+  tip.length = 0.02, hide.ns = F)
+
+p3 <- p2 +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+CairoPDF(file = "output/Fig5/SFig5F_Hepa_pla_KD_total_BMP.pdf", height = 10, width = 10)
+  print(p3)
+dev.off()
+```
+
+## siPla2g15 BMP species
+
+Compare species changed between scrmbl and siPla2g15
+
+```{r}
+mdat4 <- mdat3 |> select(-Group) |>
+  filter(Condition %in% c("scramble_2","siPla2g15")
+                         ) |>
+  droplevels()
+
+# Focus on 18:2 containing BMPs
+mdat4 <- mdat4 |> select(ID, Condition, grep("18:2", names(mdat4)))
+
+mdat4 <- mdat4 |> select(-grep("PG", names(mdat4)))
+
+
+mdat5 <- mdat4 |> pivot_longer(-c(ID, Condition), 
+                               names_to = "Lipid",
+                               values_to = "value") |>
+  drop_na()
+
+mdat5$Lipid <- gsub("BMP ", "", mdat5$Lipid)
+mdat5 <- mdat5 |> filter(!ID == 29)
+
+stat.test <- mdat5 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+pla_sig <- stat.test[stat.test$p < 0.10,]$Lipid
+
+# Missing 18:1_18:1, 18:1_22:5, 22:5_22:6
+pla_major <- c("16:0_16:0", "16:0_16:1", "16:0_18:2", "16:0_22:6",
+               "18:0_18:1", "18:0_18:2", "18:1_18:2", 
+               "18:1_20:4", "18:2_18:2", "18:2_22:6")
+```
+
+Continues from previous section
+
+```{r}
+mdat6 <- mdat5 |> filter(Lipid %in% pla_major)
+
+p0 <- ggbarplot(mdat6, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.20,
+                                  binwidth = .015*max(mdat6$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 2.0*max(mdat6$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_cells[c(1, 2)], legend = "top",
+            legend.title = "Condition", 
+            title = "Hepa1-6 BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/mg protein") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black"),
+        axis.text.x = element_text(angle = 45, 
+                                   vjust = 1,
+                                   hjust = 1,
+                                   size = 12)
+        ) +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat6 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = -0.5,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = F)
+p2
+
+CairoPDF(file = "output/Fig5/Fig5F_Hepa_BMP_species_pla.pdf", height = 10, width = 14)
+  print(p2)
+dev.off()
+```
+
+## siTFEB species
+
+```{r}
+mdat4 <- mdat3 |> select(-Group) |>
+  filter(Condition %in% c("scramble","siTFEB")
+                         ) |>
+  droplevels()
+
+# Focus on 18:2 containing BMPs
+mdat4 <- mdat4 |> select(ID, Condition, grep("18:2", names(mdat4)))
+mdat4 <- mdat4 |> select(-grep("PG", names(mdat4)))
+
+
+mdat5 <- mdat4 |> pivot_longer(-c(ID, Condition), 
+                               names_to = "Lipid",
+                               values_to = "value") |>
+  drop_na()
+
+mdat5$Lipid <- gsub("BMP ", "", mdat5$Lipid)
+
+stat.test <- mdat5 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+tfeb_sig <- stat.test[stat.test$p < 0.10,]$Lipid
+
+mdat6 <- mdat5 |> filter(Lipid %in% tfeb_sig)
+
+p0 <- ggbarplot(mdat6, x = "Lipid", y = "value",
+                add = c("mean_sd", "dotplot"), 
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.20,
+                                  binwidth = .015*max(mdat6$value, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 2.0*max(mdat6$value, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     ) 
+p1 <- ggpar(p0, palette = pal_cells[c(1, 4)], legend = "top",
+            legend.title = "Condition", 
+            title = "Hepa1-6 BMP lipid species",
+            xlab = "Lipid",
+            ylab = "ng lipid/mg protein") +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(face = "bold", 
+                            colour = "black")
+        ) +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+stat.test <- mdat6 |>
+  na.omit() |>
+  group_by(Lipid) |>
+  t_test(value ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Lipid", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(label = "p",
+                              size = 4,
+                              vjust = -0.02,
+                              bracket.nudge.y = -0.5,
+                              stat.test, 
+                              tip.length = 0.02, 
+                              hide.ns = F)
+p2
+
+CairoPDF(file = "output/Fig5/Fig5F_Hepa_BMP_species_pla.pdf", height = 10, width = 10)
+  print(p2)
+dev.off()
+```

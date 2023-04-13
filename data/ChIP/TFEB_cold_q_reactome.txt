@@ -1,0 +1,29 @@
+Reactome pathways	Mus musculus - REFLIST (21997)	upload_1 (316)	upload_1 (expected)	upload_1 (over/under)	upload_1 (fold Enrichment)	upload_1 (raw P-value)	upload_1 (FDR)
+alpha-linolenic acid (ALA) metabolism (R-MMU-2046106)	13	6	0.19	+	32.13	1.79E-07	4.34E-05
+alpha-linolenic (omega3) and linoleic (omega6) acid metabolism (R-MMU-2046104)	13	6	0.19	+	32.13	1.79E-07	3.80E-05
+Chylomicron assembly (R-MMU-8963888)	10	4	0.14	+	27.84	3.53E-05	4.62E-03
+Chylomicron remodeling (R-MMU-8963901)	10	4	0.14	+	27.84	3.53E-05	4.29E-03
+Linoleic acid (LA) metabolism (R-MMU-2046105)	8	3	0.11	+	26.1	4.27E-04	3.15E-02
+Triglyceride biosynthesis (R-MMU-75109)	13	4	0.19	+	21.42	8.12E-05	8.12E-03
+Plasma lipoprotein assembly (R-MMU-8963898)	18	4	0.26	+	15.47	2.36E-04	2.11E-02
+Plasma lipoprotein remodeling (R-MMU-8963899)	27	6	0.39	+	15.47	6.17E-06	8.75E-04
+Synthesis of PC (R-MMU-1483191)	26	5	0.37	+	13.39	6.93E-05	7.86E-03
+Synthesis of bile acids and bile salts via 7alpha-hydroxycholesterol (R-MMU-193368)	22	4	0.32	+	12.66	4.61E-04	3.14E-02
+Peroxisomal lipid metabolism (R-MMU-390918)	28	5	0.4	+	12.43	9.46E-05	8.93E-03
+Metabolism of fat-soluble vitamins (R-MMU-6806667)	45	8	0.65	+	12.38	7.54E-07	1.28E-04
+Retinoid metabolism and transport (R-MMU-975634)	41	7	0.59	+	11.88	4.78E-06	7.39E-04
+Triglyceride metabolism (R-MMU-8979227)	24	4	0.34	+	11.6	6.18E-04	3.89E-02
+Peroxisomal protein import (R-MMU-9033241)	64	10	0.92	+	10.88	9.08E-08	3.86E-05
+Bile acid and bile salt metabolism (R-MMU-194068)	42	5	0.6	+	8.29	5.20E-04	3.40E-02
+Protein localization (R-MMU-9609507)	104	12	1.49	+	8.03	9.77E-08	3.32E-05
+"Plasma lipoprotein assembly, remodeling, and clearance (R-MMU-174824)"	60	6	0.86	+	6.96	3.42E-04	2.91E-02
+Fatty acid metabolism (R-MMU-8978868)	169	15	2.43	+	6.18	6.16E-08	3.49E-05
+Metabolism of vitamins and cofactors (R-MMU-196854)	167	14	2.4	+	5.84	3.26E-07	6.15E-05
+Visual phototransduction (R-MMU-2187338)	88	7	1.26	+	5.54	4.07E-04	3.15E-02
+Glycerophospholipid biosynthesis (R-MMU-1483206)	117	9	1.68	+	5.35	7.90E-05	8.40E-03
+Metabolism of lipids (R-MMU-556833)	602	32	8.65	+	3.7	5.76E-10	4.89E-07
+Biological oxidations (R-MMU-211859)	211	11	3.03	+	3.63	3.45E-04	2.79E-02
+Phospholipid metabolism (R-MMU-1483257)	192	10	2.76	+	3.63	6.40E-04	3.89E-02
+Metabolism (R-MMU-1430728)	1772	73	25.46	+	2.87	4.29E-16	7.30E-13
+Transport of small molecules (R-MMU-382551)	674	22	9.68	+	2.27	4.54E-04	3.22E-02
+Unclassified (UNCLASSIFIED)	12955	139	186.11	-	0.75	1.36E-07	3.86E-05

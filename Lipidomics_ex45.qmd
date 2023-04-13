@@ -58,7 +58,7 @@ mydata1$`Total PE` <- rowSums(mydata1[,grep('\\bPE\\b', colnames(mydata1))])
 mydata1$`Total PI` <- rowSums(mydata1[,grep('\\bPI\\b', colnames(mydata1))])
 mydata1$`Total PS` <- rowSums(mydata1[,grep('\\bPS\\b', colnames(mydata1))])
 
-mydata1$`Total SM` <- rowSums(mydata1[,grep('\\SM\\b', colnames(mydata1))]) 
+mydata1$`Total SM` <- rowSums(mydata1[,grep('\\bSM\\b', colnames(mydata1))]) 
 mydata1$`Total TG` <- rowSums(mydata1[,grep('TG', colnames(mydata1))])
 
 mydata1$`Total OxPL` <- rowSums(mydata1[,grep('Ox', colnames(mydata1))])
@@ -98,6 +98,7 @@ mdat <- read_csv("data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
 ```
 
 ## Ceramides
+
 ```{r}
 mdat1 <- mdat |> select(Name:Genotype, `Total ACar`:`Total OxPL`)
 
@@ -361,23 +362,28 @@ Con_sig <- stat.test[stat.test$p < 0.05,]$Lipid
 KD_unique <- KD_sig[!KD_sig %in% Con_sig]
 Both <- KD_sig[KD_sig %in% Con_sig]
 
-# High
-Both_high <- c("18:1_18:2", "18:2_18:2", 
-               "18:2_20:4", "18:3_22:6",
-               "20:4_20:5")
+# High all
+all_high <- c("18:1_18:2", "18:2_18:2",
+              "18:2_20:4", "18:2_22:6",
+              "18:3_22:6", "20:4_20:5",
+              "20:5_22:6")
+
+# Both high
+all_high <- c("18:1_18:2", "18:2_18:2",
+              "18:2_20:4", "18:3_22:6")
 ```
 
 Continues from previous section
 
 ```{r}
 # Different in cold regardless of Genotype
-mdat4 <- mdat3 |> filter(Lipid %in% Both_high)
+mdat4 <- mdat3 |> filter(Lipid %in% all_high)
 
 p0 <- ggbarplot(mdat4, x = "Lipid", y = "value",
                 add = c("mean_sd", "dotplot"), 
                 color = "Condition", fill = "Condition", 
                 error.plot = "errorbar", 
-                add.params = list(width = 0.35,
+                add.params = list(width = 0.20,
                                   binwidth = .015*max(mdat4$value, 
                                                       na.rm = T)
                                   ),
@@ -420,7 +426,7 @@ p2 <- p1 + stat_pvalue_manual(label = "p.signif",
                               hide.ns = T)
 p2
 
-CairoPDF(file = "output/Fig4/Fig4E_BMP_species_both_high.pdf", height = 10, width = 14)
+CairoPDF(file = "output/Fig4/Fig4E_BMP_species_all_high.pdf", height = 10, width = 14)
   print(p2)
 dev.off()
 
@@ -646,3 +652,57 @@ CairoPDF(file = "output/Fig4/SFig4E_BMP_species_not_diff.pdf", height = 10, widt
   print(p2)
 dev.off()
 ```
+
+
+# Eddie
+
+```{r}
+mdat <- read_csv("eddie_ketones.csv")
+mdat <- mdat |> filter(!`ID #` == 361)
+mdat1 <- mdat |> select(`Mouse line`, Diet, Genotype, Sex, `Ketone Avg`)
+mdat1$Diet <- gsub("Acute ", "", mdat1$Diet)
+mdat1$Diet <- gsub(" Diet", "", mdat1$Diet)
+
+mdat1$Condition <- paste0(mdat1$Sex, "_", mdat1$Diet)
+mdat1$Condition <- factor(mdat1$Condition,
+                          levels = c("F_Ctrl", "F_Keto",
+                                     "M_Ctrl", "M_Keto")
+                          )
+
+mdat1$`Mouse line` <- factor(mdat1$`Mouse line`,
+                          levels = c("ACAD10", "ACAD11")
+                          )
+mdat1$Genotype <- factor(mdat1$Genotype,
+                          levels = c("WT", "KO")
+                          )
+
+
+p0 <- mdat1 |> filter(`Mouse line` == "ACAD11") |>
+  ggplot(aes(x=Condition,                
+             y=`Ketone Avg`,
+             group = Genotype,          
+             fill = Genotype)) +
+  geom_boxplot(aes(group = interaction(Genotype, Condition)),  
+               width = 0.5, alpha = 0.9,                  
+               outlier.shape = NA,                        
+               position = position_dodge(width = 0.8)     
+               ) +
+  geom_point(shape = 21,                
+             size = 1.5,                
+             alpha = 0.7,
+             position=position_jitterdodge(dodge.width = 0.8), 
+             color = "grey30") + 
+  theme(legend.position = "none",                 
+        plot.title = element_text(size = 11)
+        ) +
+  xlab("Condition") +                                 
+  ylab("Ketones"
+       ) +
+  theme_bw(base_size = 16, base_family = "Arial") +  
+  ggtitle("ACAD11") 
+p0
+
+
+
+```
+

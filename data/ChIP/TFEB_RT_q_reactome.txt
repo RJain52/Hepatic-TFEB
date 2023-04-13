@@ -1,0 +1,177 @@
+Reactome pathways	Mus musculus - REFLIST (21997)	upload_1 (6405)	upload_1 (expected)	upload_1 (over/under)	upload_1 (fold Enrichment)	upload_1 (raw P-value)	upload_1 (FDR)
+Synthesis of PE (R-MMU-1483213)	12	12	3.49	+	3.43	5.08E-03	4.91E-02
+Glucuronidation (R-MMU-156588)	22	19	6.41	+	2.97	1.01E-03	1.70E-02
+Plasma lipoprotein assembly (R-MMU-8963898)	18	15	5.24	+	2.86	3.21E-03	3.81E-02
+Peroxisomal lipid metabolism (R-MMU-390918)	28	23	8.15	+	2.82	3.34E-04	7.37E-03
+Plasma lipoprotein remodeling (R-MMU-8963899)	27	22	7.86	+	2.8	4.90E-04	9.91E-03
+Synthesis of bile acids and bile salts via 7alpha-hydroxycholesterol (R-MMU-193368)	22	17	6.41	+	2.65	3.38E-03	3.88E-02
+Peroxisomal protein import (R-MMU-9033241)	64	49	18.64	+	2.63	1.21E-06	5.87E-05
+Xenobiotics (R-MMU-211981)	27	20	7.86	+	2.54	2.40E-03	3.27E-02
+"Plasma lipoprotein assembly, remodeling, and clearance (R-MMU-174824)"	60	44	17.47	+	2.52	8.67E-06	3.28E-04
+Plasma lipoprotein clearance (R-MMU-8964043)	30	22	8.74	+	2.52	1.38E-03	2.15E-02
+Pyruvate metabolism (R-MMU-70268)	28	20	8.15	+	2.45	2.90E-03	3.66E-02
+Pyruvate metabolism and Citric Acid (TCA) cycle (R-MMU-71406)	52	37	15.14	+	2.44	6.06E-05	1.81E-03
+SUMOylation of intracellular receptors (R-MMU-4090294)	27	19	7.86	+	2.42	4.21E-03	4.47E-02
+Metabolism of porphyrins (R-MMU-189445)	27	19	7.86	+	2.42	4.21E-03	4.45E-02
+Protein localization (R-MMU-9609507)	104	73	30.28	+	2.41	3.36E-08	2.72E-06
+Glyoxylate metabolism and glycine degradation (R-MMU-389661)	30	21	8.74	+	2.4	3.62E-03	4.13E-02
+Phase II - Conjugation of compounds (R-MMU-156580)	97	67	28.24	+	2.37	1.54E-07	1.01E-05
+Bile acid and bile salt metabolism (R-MMU-194068)	42	29	12.23	+	2.37	5.35E-04	1.07E-02
+Synthesis of bile acids and bile salts (R-MMU-192105)	32	22	9.32	+	2.36	2.85E-03	3.64E-02
+Signaling by ERBB4 (R-MMU-1236394)	31	21	9.03	+	2.33	4.10E-03	4.41E-02
+TBC/RABGAPs (R-MMU-8854214)	34	23	9.9	+	2.32	2.35E-03	3.23E-02
+Glutathione conjugation (R-MMU-156590)	33	22	9.61	+	2.29	3.37E-03	3.92E-02
+Mitochondrial Fatty Acid Beta-Oxidation (R-MMU-77289)	37	24	10.77	+	2.23	3.16E-03	3.78E-02
+PKMTs methylate histone lysines (R-MMU-3214841)	47	30	13.69	+	2.19	1.42E-03	2.20E-02
+Biological oxidations (R-MMU-211859)	211	134	61.44	+	2.18	8.03E-12	1.95E-09
+Formation of Fibrin Clot (Clotting Cascade) (R-MMU-140877)	38	24	11.06	+	2.17	3.69E-03	4.18E-02
+Regulation of HMOX1 expression and activity (R-MMU-9707587)	59	36	17.18	+	2.1	7.72E-04	1.46E-02
+Nuclear Receptor transcription pathway (R-MMU-383280)	51	31	14.85	+	2.09	2.04E-03	2.89E-02
+COPII-mediated vesicle transport (R-MMU-204005)	68	41	19.8	+	2.07	3.38E-04	7.37E-03
+Deadenylation-dependent mRNA decay (R-MMU-429914)	55	33	16.01	+	2.06	1.90E-03	2.81E-02
+Transcriptional regulation by RUNX2 (R-MMU-8878166)	60	36	17.47	+	2.06	8.66E-04	1.57E-02
+Regulation of ornithine decarboxylase (ODC) (R-MMU-350562)	50	30	14.56	+	2.06	2.83E-03	3.65E-02
+Regulation of mRNA stability by proteins that bind AU-rich elements (R-MMU-450531)	82	49	23.88	+	2.05	1.34E-04	3.66E-03
+Regulation of RUNX2 expression and activity (R-MMU-8939902)	49	29	14.27	+	2.03	3.92E-03	4.36E-02
+Fatty acid metabolism (R-MMU-8978868)	169	100	49.21	+	2.03	6.08E-08	4.70E-06
+RNA polymerase II transcribes snRNA genes (R-MMU-6807505)	73	43	21.26	+	2.02	4.77E-04	9.89E-03
+ROS sensing by NFE2L2 (R-MMU-8932339)	51	30	14.85	+	2.02	3.11E-03	3.75E-02
+Signaling by TGF-beta Receptor Complex (R-MMU-170834)	63	37	18.34	+	2.02	1.08E-03	1.79E-02
+Phase I - Functionalization of compounds (R-MMU-211945)	109	64	31.74	+	2.02	1.52E-05	5.51E-04
+Sphingolipid de novo biosynthesis (R-MMU-1660661)	46	27	13.39	+	2.02	4.80E-03	4.74E-02
+Cytochrome P450 - arranged by substrate type (R-MMU-211897)	72	42	20.96	+	2	6.53E-04	1.28E-02
+Golgi Associated Vesicle Biogenesis (R-MMU-432722)	55	32	16.01	+	2	2.81E-03	3.64E-02
+Cellular response to hypoxia (R-MMU-1234174)	69	40	20.09	+	1.99	7.82E-04	1.45E-02
+Oxygen-dependent proline hydroxylation of Hypoxia-inducible Factor Alpha (R-MMU-1234176)	64	37	18.64	+	1.99	1.20E-03	1.97E-02
+Metabolism of amino acids and derivatives (R-MMU-71291)	251	145	73.09	+	1.98	1.93E-10	2.52E-08
+AUF1 (hnRNP D0) binds and destabilizes mRNA (R-MMU-450408)	52	30	15.14	+	1.98	4.95E-03	4.86E-02
+Regulation of RUNX3 expression and activity (R-MMU-8941858)	52	30	15.14	+	1.98	4.95E-03	4.84E-02
+mRNA Splicing - Major Pathway (R-MMU-72163)	180	103	52.41	+	1.97	1.33E-07	9.01E-06
+NIK-->noncanonical NF-kB signaling (R-MMU-5676590)	56	32	16.31	+	1.96	3.09E-03	3.78E-02
+Dectin-1 mediated noncanonical NF-kB signaling (R-MMU-5607761)	56	32	16.31	+	1.96	3.09E-03	3.76E-02
+Signaling by TGFB family members (R-MMU-9006936)	90	51	26.21	+	1.95	2.41E-04	5.70E-03
+ABC-family proteins mediated transport (R-MMU-382556)	99	56	28.83	+	1.94	1.46E-04	3.87E-03
+Degradation of beta-catenin by the destruction complex (R-MMU-195253)	78	44	22.71	+	1.94	6.87E-04	1.33E-02
+mRNA Splicing (R-MMU-72172)	188	106	54.74	+	1.94	1.56E-07	9.84E-06
+Transcriptional regulation by RUNX3 (R-MMU-8878159)	80	45	23.29	+	1.93	7.81E-04	1.46E-02
+Cellular response to chemical stress (R-MMU-9711123)	143	80	41.64	+	1.92	5.58E-06	2.21E-04
+Activation of NF-kappaB in B cells (R-MMU-1169091)	63	35	18.34	+	1.91	3.34E-03	3.92E-02
+Regulation of PTEN stability and activity (R-MMU-8948751)	67	37	19.51	+	1.9	3.00E-03	3.72E-02
+Metabolism of polyamines (R-MMU-351202)	58	32	16.89	+	1.89	5.07E-03	4.93E-02
+trans-Golgi Network Vesicle Budding (R-MMU-199992)	71	39	20.67	+	1.89	1.92E-03	2.81E-02
+Signaling by NTRK1 (TRKA) (R-MMU-187037)	62	34	18.05	+	1.88	4.51E-03	4.59E-02
+MAPK6/MAPK4 signaling (R-MMU-5687128)	73	40	21.26	+	1.88	2.11E-03	2.96E-02
+ER to Golgi Anterograde Transport (R-MMU-199977)	147	80	42.8	+	1.87	1.39E-05	5.15E-04
+Cytoprotection by HMOX1 (R-MMU-9707564)	111	60	32.32	+	1.86	2.12E-04	5.14E-03
+Metabolism of steroids (R-MMU-8957322)	117	63	34.07	+	1.85	1.50E-04	3.93E-03
+Macroautophagy (R-MMU-1632852)	119	64	34.65	+	1.85	1.22E-04	3.44E-03
+Autophagy (R-MMU-9612973)	119	64	34.65	+	1.85	1.22E-04	3.39E-03
+The citric acid (TCA) cycle and respiratory electron transport (R-MMU-1428517)	170	91	49.5	+	1.84	4.95E-06	2.00E-04
+Signaling by NTRKs (R-MMU-166520)	75	40	21.84	+	1.83	3.37E-03	3.90E-02
+Cyclin E associated events during G1/S transition  (R-MMU-69202)	68	36	19.8	+	1.82	4.62E-03	4.65E-02
+Toll Like Receptor 4 (TLR4) Cascade (R-MMU-166016)	102	54	29.7	+	1.82	6.98E-04	1.33E-02
+CLEC7A (Dectin-1) signaling (R-MMU-5607764)	89	47	25.91	+	1.81	1.34E-03	2.12E-02
+TRAF6 mediated induction of NFkB and MAP kinases upon TLR7/8 or 9 activation (R-MMU-975138)	72	38	20.96	+	1.81	4.03E-03	4.39E-02
+Metabolism of lipids (R-MMU-556833)	602	317	175.29	+	1.81	5.60E-17	3.18E-14
+Toll Like Receptor 9 (TLR9) Cascade (R-MMU-168138)	78	41	22.71	+	1.81	2.86E-03	3.62E-02
+MyD88-independent TLR4 cascade  (R-MMU-166166)	84	44	24.46	+	1.8	2.04E-03	2.93E-02
+TRIF(TICAM1)-mediated TLR4 signaling  (R-MMU-937061)	84	44	24.46	+	1.8	2.04E-03	2.91E-02
+Interleukin-1 signaling (R-MMU-9020702)	94	49	27.37	+	1.79	1.26E-03	2.04E-02
+Metabolism of vitamins and cofactors (R-MMU-196854)	167	87	48.63	+	1.79	2.08E-05	7.09E-04
+Processing of Capped Intron-Containing Pre-mRNA (R-MMU-72203)	240	125	69.88	+	1.79	2.76E-07	1.68E-05
+Metabolism (R-MMU-1430728)	1772	921	515.96	+	1.79	7.39E-48	6.28E-45
+Toll-like Receptor Cascades (R-MMU-168898)	131	68	38.14	+	1.78	1.66E-04	4.20E-03
+Transport to the Golgi and subsequent modification (R-MMU-948021)	177	91	51.54	+	1.77	1.82E-05	6.30E-04
+COPI-mediated anterograde transport (R-MMU-6807878)	94	48	27.37	+	1.75	2.35E-03	3.25E-02
+Metabolism of RNA (R-MMU-8953854)	564	288	164.22	+	1.75	2.44E-14	8.29E-12
+Metabolism of water-soluble vitamins and cofactors (R-MMU-196849)	108	55	31.45	+	1.75	9.64E-04	1.66E-02
+Hedgehog 'on' state (R-MMU-5632684)	81	41	23.59	+	1.74	4.67E-03	4.64E-02
+PTEN Regulation (R-MMU-6807070)	111	56	32.32	+	1.73	1.09E-03	1.80E-02
+Rab regulation of trafficking (R-MMU-9007101)	115	58	33.49	+	1.73	9.49E-04	1.66E-02
+G1/S Transition (R-MMU-69206)	104	52	30.28	+	1.72	1.99E-03	2.90E-02
+VEGFA-VEGFR2 Pathway (R-MMU-4420097)	92	46	26.79	+	1.72	4.00E-03	4.39E-02
+SUMO E3 ligases SUMOylate target proteins (R-MMU-3108232)	149	74	43.39	+	1.71	2.71E-04	6.22E-03
+Clathrin-mediated endocytosis (R-MMU-8856828)	141	70	41.06	+	1.7	3.59E-04	7.64E-03
+Transcriptional Regulation by TP53 (R-MMU-3700989)	297	147	86.48	+	1.7	2.97E-07	1.69E-05
+C-type lectin receptors (CLRs) (R-MMU-5621481)	110	54	32.03	+	1.69	2.55E-03	3.36E-02
+SUMOylation (R-MMU-2990846)	155	76	45.13	+	1.68	3.45E-04	7.42E-03
+Signaling by VEGF (R-MMU-194138)	100	49	29.12	+	1.68	4.13E-03	4.42E-02
+Interleukin-1 family signaling (R-MMU-446652)	109	53	31.74	+	1.67	3.28E-03	3.87E-02
+Mitotic G1 phase and G1/S transition (R-MMU-453279)	130	63	37.85	+	1.66	1.30E-03	2.09E-02
+Asparagine N-linked glycosylation (R-MMU-446203)	262	126	76.29	+	1.65	7.12E-06	2.75E-04
+Cellular responses to stimuli (R-MMU-8953897)	488	234	142.09	+	1.65	7.04E-10	7.04E-08
+Phospholipid metabolism (R-MMU-1483257)	192	92	55.91	+	1.65	1.43E-04	3.86E-03
+Cellular responses to stress (R-MMU-2262752)	485	232	141.22	+	1.64	1.08E-09	1.02E-07
+Membrane Trafficking (R-MMU-199991)	559	265	162.77	+	1.63	1.36E-10	1.92E-08
+Regulation of TP53 Activity (R-MMU-5633007)	152	72	44.26	+	1.63	9.45E-04	1.67E-02
+Antigen processing: Ubiquitination & Proteasome degradation (R-MMU-983168)	296	140	86.19	+	1.62	3.53E-06	1.50E-04
+GTP hydrolysis and joining of the 60S ribosomal subunit (R-MMU-72706)	110	52	32.03	+	1.62	4.63E-03	4.63E-02
+Cap-dependent Translation Initiation (R-MMU-72737)	117	55	34.07	+	1.61	4.39E-03	4.57E-02
+Glycerophospholipid biosynthesis (R-MMU-1483206)	117	55	34.07	+	1.61	4.39E-03	4.55E-02
+Eukaryotic Translation Initiation (R-MMU-72613)	117	55	34.07	+	1.61	4.39E-03	4.52E-02
+Signaling by Hedgehog (R-MMU-5358351)	139	65	40.47	+	1.61	2.35E-03	3.27E-02
+Deubiquitination (R-MMU-5688426)	246	115	71.63	+	1.61	4.58E-05	1.44E-03
+Ub-specific processing proteases (R-MMU-5689880)	179	83	52.12	+	1.59	6.09E-04	1.20E-02
+Death Receptor Signalling (R-MMU-73887)	126	58	36.69	+	1.58	4.56E-03	4.61E-02
+Signaling by Nuclear Receptors (R-MMU-9006931)	211	97	61.44	+	1.58	2.67E-04	6.22E-03
+Intracellular signaling by second messengers (R-MMU-9006925)	259	119	75.41	+	1.58	5.34E-05	1.62E-03
+TCF dependent signaling in response to WNT (R-MMU-201681)	157	72	45.71	+	1.57	1.88E-03	2.80E-02
+PIP3 activates AKT signaling (R-MMU-1257604)	232	106	67.55	+	1.57	1.79E-04	4.40E-03
+Signaling by Interleukins (R-MMU-449147)	252	115	73.38	+	1.57	9.19E-05	2.65E-03
+Chromatin modifying enzymes (R-MMU-3247509)	185	83	53.87	+	1.54	1.52E-03	2.33E-02
+Chromatin organization (R-MMU-4839726)	185	83	53.87	+	1.54	1.52E-03	2.31E-02
+Major pathway of rRNA processing in the nucleolus and cytosol (R-MMU-6791226)	175	78	50.96	+	1.53	2.41E-03	3.25E-02
+rRNA processing in the nucleus and cytosol (R-MMU-8868773)	175	78	50.96	+	1.53	2.41E-03	3.23E-02
+rRNA processing (R-MMU-72312)	175	78	50.96	+	1.53	2.41E-03	3.20E-02
+ESR-mediated signaling (R-MMU-8939211)	160	71	46.59	+	1.52	4.28E-03	4.49E-02
+Signaling by Receptor Tyrosine Kinases (R-MMU-9006934)	424	188	123.46	+	1.52	2.46E-06	1.13E-04
+Neddylation (R-MMU-8951664)	223	98	64.93	+	1.51	9.56E-04	1.66E-02
+Class I MHC mediated antigen processing & presentation (R-MMU-983169)	360	158	104.82	+	1.51	2.59E-05	8.64E-04
+Intra-Golgi and retrograde Golgi-to-ER traffic (R-MMU-6811442)	185	81	53.87	+	1.5	3.08E-03	3.80E-02
+Cytokine Signaling in Immune system (R-MMU-1280215)	387	169	112.69	+	1.5	1.57E-05	5.56E-04
+Signaling by WNT (R-MMU-195721)	238	102	69.3	+	1.47	1.34E-03	2.12E-02
+Metabolism of carbohydrates (R-MMU-71387)	264	112	76.87	+	1.46	9.80E-04	1.67E-02
+RNA Polymerase II Transcription (R-MMU-73857)	939	398	273.41	+	1.46	4.01E-10	4.55E-08
+Translation (R-MMU-72766)	225	95	65.51	+	1.45	3.00E-03	3.75E-02
+Mitotic Anaphase (R-MMU-68882)	216	91	62.89	+	1.45	3.84E-03	4.32E-02
+Gene expression (Transcription) (R-MMU-74160)	1045	440	304.28	+	1.45	8.41E-11	1.43E-08
+Mitotic Metaphase and Anaphase (R-MMU-2555396)	217	91	63.19	+	1.44	3.94E-03	4.35E-02
+RHO GTPase cycle (R-MMU-9012999)	449	187	130.74	+	1.43	5.31E-05	1.64E-03
+Post-translational protein modification (R-MMU-597592)	1289	535	375.33	+	1.43	3.25E-12	9.21E-10
+Cell Cycle Checkpoints (R-MMU-69620)	261	108	76	+	1.42	2.56E-03	3.35E-02
+Generic Transcription Pathway (R-MMU-212436)	819	338	238.47	+	1.42	8.10E-08	5.99E-06
+Metabolism of proteins (R-MMU-392499)	1639	676	477.24	+	1.42	7.49E-15	3.18E-12
+Transport of small molecules (R-MMU-382551)	674	277	196.25	+	1.41	1.69E-06	8.00E-05
+"Platelet activation, signaling and aggregation (R-MMU-76002)"	251	103	73.09	+	1.41	3.92E-03	4.38E-02
+Vesicle-mediated transport (R-MMU-5653656)	700	282	203.82	+	1.38	4.39E-06	1.82E-04
+"Cell Cycle, Mitotic (R-MMU-69278)"	494	195	143.84	+	1.36	3.72E-04	7.80E-03
+"Signaling by Rho GTPases, Miro GTPases and RHOBTB3 (R-MMU-9716542)"	679	268	197.71	+	1.36	2.69E-05	8.78E-04
+Signaling by Rho GTPases (R-MMU-194315)	664	261	193.34	+	1.35	4.38E-05	1.41E-03
+Cell Cycle (R-MMU-1640170)	580	227	168.88	+	1.34	1.67E-04	4.18E-03
+M Phase (R-MMU-68886)	367	142	106.86	+	1.33	4.51E-03	4.62E-02
+Neutrophil degranulation (R-MMU-6798695)	526	202	153.16	+	1.32	8.75E-04	1.57E-02
+Signal Transduction (R-MMU-162582)	2251	833	655.44	+	1.27	6.97E-10	7.40E-08
+Immune System (R-MMU-168256)	1720	632	500.82	+	1.26	2.87E-07	1.68E-05
+Innate Immune System (R-MMU-168249)	1047	381	304.86	+	1.25	1.63E-04	4.19E-03
+Unclassified (UNCLASSIFIED)	12955	2959	3772.19	-	0.78	4.45E-72	7.57E-69
+GPCR ligand binding (R-MMU-500792)	395	77	115.01	-	0.67	8.43E-04	1.54E-02
+Cell surface interactions at the vascular wall (R-MMU-202733)	227	41	66.1	-	0.62	4.06E-03	4.39E-02
+Binding and Uptake of Ligands by Scavenger Receptors (R-MMU-2173782)	142	18	41.35	-	0.44	2.92E-04	6.61E-03
+Formation of the cornified envelope (R-MMU-6809371)	87	8	25.33	-	0.32	4.84E-04	9.92E-03
+Immunoregulatory interactions between a Lymphoid and a non-Lymphoid cell (R-MMU-198933)	227	20	66.1	-	0.3	2.24E-09	1.91E-07
+FCERI mediated MAPK activation (R-MMU-2871796)	138	11	40.18	-	0.27	1.04E-06	5.18E-05
+Scavenging of heme from plasma (R-MMU-2168880)	128	10	37.27	-	0.27	2.90E-06	1.26E-04
+Antimicrobial peptides (R-MMU-6803157)	77	6	22.42	-	0.27	3.17E-04	7.09E-03
+FCERI mediated Ca+2 mobilization (R-MMU-2871809)	133	10	38.73	-	0.26	9.58E-07	4.93E-05
+Role of LAT2/NTAL/LAB on calcium mobilization (R-MMU-2730905)	121	9	35.23	-	0.26	2.57E-06	1.15E-04
+Initial triggering of complement (R-MMU-166663)	129	9	37.56	-	0.24	5.96E-07	3.27E-05
+Antigen activates B Cell Receptor (BCR) leading to generation of second messengers (R-MMU-983695)	130	9	37.85	-	0.24	6.21E-07	3.30E-05
+Role of phospholipids in phagocytosis (R-MMU-2029485)	131	8	38.14	-	0.21	1.14E-07	8.11E-06
+Keratinization (R-MMU-6805567)	171	8	49.79	-	0.16	3.09E-11	5.83E-09
+Olfactory Signaling Pathway (R-MMU-381753)	58	2	16.89	-	0.12	6.86E-05	2.01E-03
+Creation of C4 and C2 activators (R-MMU-166786)	122	4	35.52	-	0.11	1.29E-09	1.16E-07
+FCGR activation (R-MMU-2029481)	122	3	35.52	-	0.08	2.10E-10	2.55E-08
+Defensins (R-MMU-1461973)	44	1	12.81	-	0.08	2.35E-04	5.63E-03
+Classical antibody-mediated complement activation (R-MMU-173623)	116	2	33.78	-	0.06	1.06E-10	1.64E-08
+CD22 mediated BCR regulation (R-MMU-5690714)	112	1	32.61	-	0.03	1.50E-11	3.20E-09
+Alpha-defensins (R-MMU-1462054)	27	0	7.86	-	 < 0.01	1.84E-03	2.77E-02

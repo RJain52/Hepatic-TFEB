@@ -4,7 +4,9 @@ author: "Raghav Jain"
 format: html
 editor: visual
 ---
+
 # 1. Load Packages
+
 ```{r}
 if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(scales)){install.packages("scales")}
@@ -15,11 +17,13 @@ if(!require(ggpubr)){install.packages("ggpubr")}
 if(!require(rstatix)){install.packages("rstatix")}
 pal_33 <- c("#D51317", "#164194")
 pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+pal_cells <- c("#706F6FFF", "#007B3DFF", "#EFC000FF", "#6F286AFF")
 ```
 
 # 2. Exp 45 Knockdown transcripts
+
 ```{r}
-# Intial qPCR
+# Initial qPCR
 mdat <- read_excel("data/qPCR/2023_0106_qPCR_TFEB_KD_at1.xls",
                  sheet = 'Results', 
                  range = "A38:AK377", 
@@ -171,6 +175,223 @@ p2
 
 CairoPDF(file = "output/Fig4/Fig4A_Exp45_TFEB_qPCR_at2.pdf",
          height = 8, width = 10)
+  print(p2)
+dev.off()
+```
+
+# 3. Exp 33 RT vs Cold
+
+Might be Exp 7
+
+```{r}
+mdat <- read_excel("data/qPCR/2022_0405_PLA2G15_RTvCOLD_liver.xlsx",
+                 sheet = 'Results', 
+                 range = "A48:AK431", 
+                 trim_ws = T)
+
+mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
+
+# Remove standard rows
+mdat <- mdat |> filter(Task == "UNKNOWN")
+
+# Subset out the relevant data
+Y <- mdat |> select(`Sample Name`, `Target Name`, 
+                    `CT`, `Quantity Mean`,
+                    `Ct SD`, `Quantity`)   
+
+
+# Convert CT and quantity to number instead of character values
+Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
+                 )
+
+# When the target was not present in the sample, the last 3 columns will have NA
+# Replace NA with value (0) that will pass the filters 
+Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
+                 )
+# Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
+Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90)
+
+# Make gene name factor
+Y$`Target Name` <- as.factor(Y$`Target Name`)
+
+# Normalize to each samples RPS3
+Y <- Y |> group_by(`Sample Name`) |>
+  mutate(norm_quant = Quantity/Quantity[`Target Name`=="RPS3"])
+
+# Remove RPS3
+Y <- Y |> filter(!`Target Name` == "RPS3") |> 
+  droplevels()
+
+Y$Condition <- gsub(" [[:digit:]]+", "", Y$`Sample Name`)
+Y$Condition <- gsub(" ", "_", Y$Condition)
+Y$Condition <- gsub("RT1", "RT", Y$Condition)
+
+Y1 <- Y |> filter(Condition %in% c("T6_RT", "T6_Cold"),
+                 `Target Name` == "PLA2G15"
+                 ) |>
+  droplevels()
+
+Y1$Condition <- gsub("T6_", "", Y1$Condition)
+
+Y1$Condition <- factor(Y1$Condition, 
+                      levels = c('RT', 'Cold')
+                      )
+
+# Pla2g15 qPCR
+p0 <- ggbarplot(Y1, x = "Condition", y = "norm_quant",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Condition", fill = "Condition", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.015*max(Y1$norm_quant, na.rm = T)),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.3*max(Y1$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       ) 
+  
+p1 <- ggpar(p0, palette = pal_45, title = "Pla2g15 Expression",  
+              xlab = "", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- Y1 |>
+    group_by(`Target Name`) |>
+    t_test(norm_quant ~ Condition) |>
+    adjust_pvalue(method = "none") %>%
+    add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "mean_sd", x = "Condition", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p.signif",
+  hide.ns = T, size = 8)
+
+p2
+
+CairoPDF(file = "output/Fig5/Fig5B_Exp07_Pla2g15_qPCR.pdf",
+         height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+# 4. Hepa1-6 KD
+siTFEB samples. Note that 'control' is siRNA control for siTfeb and siAlg12, whereas siRNA nt is for siM6pr
+```{r}
+# siRNA KD validation
+mdat <- read_excel("data/qPCR/2022_0929_siTFEB_qpcr1.xlsx",
+                 sheet = 'Results', 
+                 range = "A36:AK400", 
+                 trim_ws = T)
+
+# Pla2g15 expression
+mdat2 <- read_excel("data/qPCR/2022_0404_siTFEB_qpcr2.xlsx",
+                 sheet = 'Results', 
+                 range = "A48:AK377", 
+                 trim_ws = T)
+
+mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
+mdat2 <- mdat2[rowSums(is.na(mdat2)) != ncol(mdat2),]
+
+# Remove standard rows
+mdat <- mdat |> filter(Task == "UNKNOWN")
+mdat2 <- mdat2 |> filter(Task == "UNKNOWN")
+
+mdat$`Target Name` <- gsub("-2", "", mdat$`Target Name`)
+mdat2$`Target Name` <- gsub("Rps3", "RPS3", mdat2$`Target Name`)
+mdat2$`Sample Name` <- gsub("siRNA ", "", mdat2$`Sample Name`)
+
+# Subset out the relevant data; choose which mdat here
+Y <- mdat |> select(`Sample Name`, `Target Name`, 
+                    `CT`, `Quantity Mean`,
+                    `Ct SD`, `Quantity`)   
+
+
+# Convert CT and quantity to number instead of character values
+Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
+                 )
+
+# When the target was not present in the sample, the last 3 columns will have NA
+# Replace NA with value (0) that will pass the filters 
+Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
+                 )
+# Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]; for KD samples, loosen these values
+Y <- Y |> filter(!CT > 32, !`Ct SD` > 0.90)
+
+# To assess KD
+Y <- Y |> filter(!Quantity == 0)
+
+# Make gene name factor
+Y$`Target Name` <- as.factor(Y$`Target Name`)
+
+# Normalize to each samples RPS3
+Y <- Y |> group_by(`Sample Name`) |>
+  mutate(norm_quant = Quantity/Quantity[`Target Name`=="RPS3"])
+
+# Remove RPS3
+Y <- Y |> filter(!`Target Name` == "RPS3") |> 
+  droplevels()
+
+Y$Condition <- gsub(" [[:digit:]]+", "", Y$`Sample Name`)
+
+# for mdat
+Y$Condition <- factor(Y$Condition, 
+                      levels = c("nt", "siTFEB",
+                                 "LacZ", "TFEB OE"
+                                 )
+                      )
+
+# for mdat2
+Y$Condition <- factor(Y$Condition, 
+                      levels = c("cntrl", "TFEB", "ALG12",
+                                 "nt", "M6PR"
+                                 )
+                      )
+
+# TFEB KD Validation
+Y1 <- Y |> filter(`Target Name` == "mTFEB", Condition %in% c("nt", "siTFEB")) |>
+  droplevels()
+
+# Pla2g15
+Y1 <- Y |> filter(`Target Name` == "PLA2G15", Condition %in% c("cntrl", "TFEB")) |>
+  droplevels()
+
+p0 <- ggbarplot(Y1, x = "Condition", y = "norm_quant",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Condition", fill = "Condition", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.015*max(Y1$norm_quant, na.rm = T)),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.3*max(Y1$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       ) 
+  
+p1 <- ggpar(p0, palette = pal_cells[c(1,4)], title = "Hepa1-6 Pla2g15",  
+              xlab = "", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- Y1 |>
+  group_by(`Target Name`) |>
+  t_test(norm_quant ~ Condition) |>
+  adjust_pvalue(method = "none") %>%
+  add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "mean_sd", x = "Condition", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p.signif",
+  hide.ns = T, size = 8)
+
+p2
+
+CairoPDF(file = "output/Fig5/Fig5D_Hepa_siTFEB_qPCR_Pla2g15.pdf",
+         height = 8, width = 8)
   print(p2)
 dev.off()
 ```

@@ -14,7 +14,9 @@ if(!require(ggsci)){install.packages("ggsci")}
 if(!require(scales)){install.packages("scales")}
 if(!require(Cairo)){install.packages("Cairo")}
 if(!require(readxl)){install.packages("readxl")}
-
+if(!require(VennDiagram)){install.packages("VennDiagram")}
+if(!require(futile.logger)){install.packages("futile.logger")}
+futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 pal_33 <- c("#D51317", "#164194")
 ```
 
@@ -49,12 +51,19 @@ mdat1 <- mdat |> select(sample, `Distance to TSS`, `Gene Type`, `Gene Name`, Ann
 
 mdat2 <- mdat1 |> filter(`Distance to TSS` > -10000, `Distance to TSS` < 10000)
 
-gghistogram(mdat2, x = "Distance to TSS",
-   rug = FALSE, title = "TFEB ChIP",
-   color = "sample", fill = "sample",
-   palette = c("#E7B800", "#00AFBB"),
-   facet.by = "sample", scales = "free"
-   )
+p0 <- gghistogram(mdat2, x = "Distance to TSS",
+                  rug = FALSE, title = "TFEB ChIP",
+                  color = "sample", fill = "sample",
+                  palette = c("#E7B800", "#00AFBB"),
+                  facet.by = "sample", scales = "free"
+                  ) +
+  scale_y_continuous(expand = c(0.05, 0.05)) + 
+  theme_bw(base_family = "Arial", base_size = 12)
+
+CairoPDF(file = "output/Fig3/SFig3A_Dist_TSS_TFEB.pdf",
+         height = 8, width = 10)
+  print(p0)
+dev.off()
 ```
 
 CTD
@@ -82,20 +91,75 @@ gghistogram(mdat2, x = "Distance to TSS",
    )
 ```
 
-# Unique genes
-```{r}
-RT <- unique(RT_TFEB$`Gene Name`)
-Cold <- unique(Cold_TFEB$`Gene Name`)
-shared <- RT[RT %in% Cold]
-uni_cold <- Cold[!Cold %in% RT]
-```
+# 4. Venn Diagram of binding sites
+
+## Total unique binding sites
+
+not gonna work
 
 ```{r}
+RT_sites <- as.vector(RT_TFEB$Site)
+Cold_sites <- as.vector(Cold_TFEB$Site)
 
+# Color scheme for Venn diagram
+myCol_fill <- pal_33
+myCol_text <- alpha(pal_33, 0.8)
+
+# Make venn diagram
+v <-  venn.diagram(x = list(RT_sites, Cold_sites),
+             category.names = c("RT", "Cold"),   # title of each category in Venn diagram
+             main = "Hepatic TFEB ChIP binding sites (q<0.05)", # plot title
+             compression = "lzw",        # image compression
+             fontfamily = "Arial",       # text font
+             col = myCol_fill, fill = alpha(myCol_fill, 0.7), # fill colors
+             cat.col = myCol_text,           # text colors
+             cat.fontface = "bold" , cat.cex = 1, # font face and size
+             cat.fontfamily = "Arial",            
+             filename = NULL, resolution = 600,   # image resolution
+             output = T)
+
+CairoPDF(file = "output/Fig3/venn.pdf")
+  grid.draw(v)
+dev.off()
 ```
 
+## Unique genes
 
-# 4. Pie charts
+```{r}
+RT_TFEB <- RT_TFEB |> drop_na() |>
+  mutate(Site = paste0(Chr, "_", Start, "_", End)
+         ) 
+
+Cold_TFEB <- Cold_TFEB |> drop_na() |>
+  mutate(Site = paste0(Chr, "_", Start, "_", End)
+         ) 
+
+# Color scheme for Venn diagram
+myCol_fill <- pal_33
+myCol_text <- alpha(pal_33, 0.8)
+
+# Make venn diagram
+v <-  venn.diagram(x = list(RT, Cold),
+             category.names = c("RT", "Cold"),   # title of each category in Venn diagram
+             main = "Hepatic TFEB ChIP binding sites to genes (q<0.05)", # plot title
+             scaled = 0,
+             compression = "lzw",        # image compression
+             fontfamily = "Arial",
+             main.fontfamily = "Arial",       # text font
+             col = myCol_fill, fill = alpha(myCol_fill, 0.7), # fill colors
+             cat.col = myCol_text,           # text colors
+             cat.fontface = "bold" , cat.cex = 1, # font face and size
+             cat.fontfamily = "Arial",            
+             filename = NULL, resolution = 600,   # image resolution
+             output = T)
+
+CairoPDF(file = "output/Fig3/Fig3A_TFEB_venn_gene.pdf")
+  grid.draw(v)
+dev.off()
+```
+
+# 5. Pie charts
+
 CTD binding regions (Annotation)
 
 ```{r}
@@ -129,6 +193,7 @@ p1 <- ggpar(p0, title = paste0("RT CTD (", sum(mdat2$n), " sites)")
 
 p1
 ```
+
 TFEB binding regions (Annotation)
 
 ```{r}
@@ -145,7 +210,7 @@ mdat1 <- mdat |> select(sample, Annotation, `Gene Type`) |> drop_na()
 mdat1$Annotation <- gsub("[(]","", mdat1$Annotation)
 mdat1$Annotation <- gsub(" N.*","", mdat1$Annotation)
 
-mdat2 <- mdat1 |> filter(sample == "RT") |>
+mdat2 <- mdat1 |> filter(sample == "Cold") |>
   count(Annotation)
 
 mdat2$percent <- round(100*mdat2$n/sum(mdat2$n),2)
@@ -157,12 +222,13 @@ p0 <- ggpie(mdat2, x = "n", label = "Annot_label", fill = "Annotation",
             color = "white", palette = "lancet", font.family = "Arial",
             size = 0.5)
 
-p1 <- ggpar(p0, title = paste0("RT TFEB (", sum(mdat2$n), " sites)")
+p1 <- ggpar(p0, title = paste0("Cold TFEB (", sum(mdat2$n), " sites)")
             )
 
-p1
-
-
+CairoPDF(file = "output/Fig3/Fig3B_TFEB_Cold_Annotation.pdf",
+         height = 8, width = 8)
+  print(p1)
+dev.off()
 ```
 
 CTD binding regions (Gene Type)
@@ -195,7 +261,9 @@ p1 <- ggpar(p0, title = paste0("RT CTD (", sum(mdat2$n), " sites)")
 
 p1
 ```
+
 TFEB binding regions (Gene Type)
+
 ```{r}
 names(RT_TFEB)[1] <- "Peak_ID"
 RT_TFEB <- RT_TFEB |> mutate(sample = "RT")
@@ -208,7 +276,7 @@ mdat$sample <- factor(mdat$sample, levels = c("RT", "Cold")
 
 mdat1 <- mdat |> select(sample, Annotation, `Gene Type`) |> drop_na()
 
-mdat2 <- mdat1 |> filter(sample == "Cold") |>
+mdat2 <- mdat1 |> filter(sample == "RT") |>
   count(`Gene Type`)
 
 mdat2$percent <- round(100*mdat2$n/sum(mdat2$n),2)
@@ -223,7 +291,136 @@ p0 <- ggpie(mdat2, x = "n", label = "Type_label", fill = "Gene Type",
 p1 <- ggpar(p0, title = paste0("RT TFEB (", sum(mdat2$n), " sites)")
             )
 
-p1
+CairoPDF(file = "output/Fig3/SFig3B_TFEB_RT_Type.pdf",
+         height = 8, width = 8)
+  print(p1)
+dev.off()
+```
+
+# 6. GO Analysis
+
+```{r}
+RT <- as.vector(unique(RT_TFEB$`Gene Name`)
+                )
+Cold <- as.vector(unique(Cold_TFEB$`Gene Name`)
+                  )
+shared <- RT[RT %in% Cold]
+uni_cold <- Cold[!Cold %in% RT]
+
+write_csv(data.frame(RT), file="data/ChIP/RT_genes_q.csv")
+```
+
+Run GO analysis online. Save table and delete top rows not containing pathway info.
+
+```{r}
+Cold_GO <- read_delim(file = "data/ChIP/TFEB_cold_q_reactome.txt")
+
+# Remove similar pathways (based on fold change and description)
+Cold_GO$ID <- rownames(Cold_GO)
+Cold_GO <- Cold_GO |>
+  filter(!ID %in% c("1","4","8", "5", "18", "21", "25", "28"))
+
+RT_GO <- read_delim(file = "data/ChIP/TFEB_RT_q_reactome.txt")
+
+# Remove similar pathways (based on fold change and description)
+RT_GO$ID <- rownames(RT_GO)
+RT_GO <- RT_GO |> filter(!ID == "10")
+
+# Clean up names
+Cold_GO$`Reactome pathways` <- gsub(" (omega3)", "", Cold_GO$`Reactome pathways`, fixed = T)
+Cold_GO$`Reactome pathways` <- gsub(" (omega6)", "", Cold_GO$`Reactome pathways`, fixed = T)
+Cold_GO$`Reactome pathways` <- gsub("R-MM.*", "", Cold_GO$`Reactome pathways`)
+Cold_GO$`Reactome pathways` <- gsub(" (", "", Cold_GO$`Reactome pathways`, fixed = T)
+
+RT_GO$`Reactome pathways` <- gsub("R-MM.*", "", RT_GO$`Reactome pathways`)
+RT_GO$`Reactome pathways` <- gsub(" (", "", RT_GO$`Reactome pathways`, fixed = T)
+
+
+names(Cold_GO)[3] <- "Genes"
+names(RT_GO[3]) <- "Genes"
+
+p0 <- ggplot(Cold_GO, aes(x=reorder(`Reactome pathways`, `upload_1 (fold Enrichment)`),
+                          y=`upload_1 (fold Enrichment)`, fill = `upload_1 (FDR)`)
+             ) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 30)
+                   ) +
+  geom_bar(stat='identity') +
+  ylab("Fold Enrichment") +
+  xlab("Reactome") +
+  ggtitle("Cold") +
+  scale_fill_continuous(name = "FDR",
+                        low = "#3C5488FF", high = "#4DBBD5FF") +
+  scale_y_continuous(limits = c(0, 35),
+                     expand= c(0,0)
+                     ) +
+  coord_flip() +
+  theme_bw(base_size = 12, base_family = "Arial")
+      
+CairoPDF(file = "output/Fig3/Fig3D_TFEB_Reactome_Cold_q.pdf",
+         height = 10, width = 12)
+  print(p0)
+dev.off()
+
+RT_GO <- RT_GO[1:20,]
+RT_GO <- RT_GO |>
+  mutate(`upload_1 (fold Enrichment)` = as.numeric(`upload_1 (fold Enrichment)`)
+         )
+
+p0 <- ggplot(RT_GO, aes(x=reorder(`Reactome pathways`, `upload_1 (fold Enrichment)`), 
+                        y=`upload_1 (fold Enrichment)`, fill = `upload_1 (FDR)`)
+             ) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 30)
+                     ) +
+  geom_bar(stat='identity') +
+  ylab("Fold Enrichment") +
+  xlab("Reactome") +
+  ggtitle("RT") +
+  scale_fill_continuous(name = "FDR",
+                        low ="#DC0000FF", high = "#F39B7FFF") +
+  scale_y_continuous(limits = c(0,5),
+                     expand= c(0,0)
+                     ) +
+  coord_flip() +
+  theme_bw(base_size = 12, base_family = "Arial")
+
+CairoPDF(file = "output/Fig3/SFig3D_TFEB_Reactome_RT_q.pdf",
+         height = 10, width = 8)
+  print(p0)
+dev.off()
+
+```
+
+# 7. Data overlay
+```{r}
+# Venn Diagram
+tset <- read_csv("data/other/data_overlay.csv")
+
+Proteomics <- tolower(tset$Proteomics[!is.na(tset$Proteomics)])
+RNA <- tolower(tset$RNA[!is.na(tset$RNA)])
+ChIP <- tolower(unique(tset$ChIP[!is.na(tset$ChIP)]))
+
+show_col(pal_nejm(palette = c("default"), alpha = 1)(7))
+
+myCol_fill <- c("#20854EFF", "#F39C12FF", "#7876B1FF")
+myCol_text <- alpha(myCol_fill, 0.9)
+v <-  venn.diagram(x = list(Proteomics, RNA, ChIP),
+             category.names = c("Proteomics", "RNA-seq", "ChIP"),   # title of each category in Venn diagram
+             main = "Overlay of data", # plot title
+             compression = "lzw",        # image compression
+             fontfamily = "Arial",       # text font
+             col = myCol_fill, fill = alpha(myCol_fill, 0.6), # fill colors
+             cat.col = myCol_text,           # text colors
+             cat.fontface = "bold" , cat.cex = 1, # font face and size
+             cat.fontfamily = "Arial",            
+             filename = NULL, resolution = 600,   # image resolution
+             output = T)
+
+CairoPDF(file = "output/Fig5/Fig5A_Data_overlay.pdf")
+  grid.draw(v)
+dev.off()
+
+shared <- ChIP[ChIP %in% Proteomics[Proteomics %in% RNA]]
+print(shared)
 ```
 
 

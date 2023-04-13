@@ -23,40 +23,60 @@ pal_33 <- c("#D51317", "#164194")
 gel01 sheet 2 = LAMP2, sheet 4 = LIPA; gel02 sheet 2 = LYPLA3
 
 ```{r}
-mdat <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 2)
+mdat1 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 2)
 mdat2 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 4)
-mdat$Protein <- "LAMP2"
+mdat3 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 1)
+mdat4 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 2)
+mdat5 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 3)
+
+mdat1$Protein <- "LAMP2"
 mdat2$Protein <- "LIPA"
+mdat3$Protein <- "LAMP1"
+mdat4$Protein <- "Rab5a"
+mdat5$Protein <- "LC3"
 
-names(mdat)[3] <- "Target"
-names(mdat)[5] <- "Ratio"
-names(mdat2)[3] <- "Target"
-mdat <- rbind(mdat, mdat2)
+# LYPLA3
+names(mdat1)[3] <- "Target"
+names(mdat1)[5] <- "Ratio"
 
-names(mdat)[2] <- "Treatment"
-mdat$Treatment <- factor(mdat$Treatment, levels = c("RT", "Cold"))
 
-p0 <- ggbarplot(mdat, x = "Protein", y = "Ratio", 
+mdat <- bind_rows(mdat1, mdat2, mdat3, mdat4, mdat5)
+mdat <- mdat |> select(Sample, Treatment, Ratio, Protein)
+
+mdat$Treatment <- factor(mdat$Treatment, levels = c("RT", "Cold")
+                         )
+
+mdat$Protein <- factor(mdat$Protein, levels = c("LAMP1", "LAMP2",
+                                                "LIPA", "Rab5a",
+                                                "LC3")
+                         )
+
+mdat <- mdat |> group_by(Protein) |> 
+  mutate(norm = Ratio/mean(Ratio[Treatment == "RT"])
+         ) 
+
+# Change 'x= ' to "Protein" if plotting multiple proteins 
+p0 <- ggbarplot(mdat, x = "Protein", y = "norm", 
                 add = c("mean_sd", "dotplot"), 
                 color = "Treatment", fill = "Treatment", 
-                add.params = list(width = 0.35,
-                                  binwidth = 0.75*min(mdat$Ratio, na.rm = T)
+                add.params = list(width = 0.2,
+                                  binwidth = 0.50*min(mdat$norm, na.rm = T)
                                   ),
-                position = position_dodge(0.8), size = 0.5,
-                alpha = 0.9) +
-  scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio, na.rm = T)
+                position = position_dodge(0.8), size = 0.5
+                ) +
+  scale_y_continuous(limits = c(0.00, 1.50*max(mdat$norm, na.rm = T)
                                 ),
                      expand = c(0.0,0)
                      )
 
 p1 <- ggpar(p0, palette = pal_33, legend = "right", legend.title = "Temperature", 
             title = "Protein signal in RT versus Cold (6h)",  
-            xlab = "Treatment", ylab = "Band Intensity (normalized to beta-actin)") 
+            xlab = "Treatment", ylab = "Normalized intensity") 
 
 stat.test <- mdat |>
   na.omit() |>
   group_by(Protein) |>
-  t_test(Ratio ~ Treatment) |>
+  wilcox_test(norm ~ Treatment) |>
   adjust_pvalue(method = "none") |>
   add_significance("p")
 
@@ -66,8 +86,8 @@ stat.test <- stat.test |>
   add_xy_position(fun = "max", "Protein", dodge = 0.8) 
 
 p2 <- p1 + stat_pvalue_manual(
-  stat.test, label = "p", vjust = -0.1,
-  bracket.nudge.y = 0.05,
+  stat.test, label = "p",
+  bracket.nudge.y = 0.1,
   tip.length = 0.02, 
   hide.ns = F)
 
@@ -75,7 +95,7 @@ p3 <- p2 + theme_bw(base_size = 16) +
   scale_color_manual(values = c("black", "black"))
 print(p3)
 
-CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen.pdf", height = 8, width = 10)
+CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen.pdf", height = 8, width = 14)
   print(p3)
 dev.off()
 ```
@@ -91,11 +111,12 @@ names(mdat)[2] <- "Treatment"
 
 p0 <- ggbarplot(mdat, x = "Treatment", y = "Ratio", 
                 add = c("mean_sd", "dotplot"), color = "Treatment", fill = "Treatment", 
-                add.params = list(width = 0.35, 
+                add.params = list(width = 0.20, 
                                   binwidth = .13*min(mdat$Ratio, na.rm = T)),
-                alpha = 0.90, position = position_dodge(0.8), size = 0.5) +
+                position = position_dodge(0.8), size = 0.5) +
   scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio, na.rm = T)),
-                     expand = c(0,0))
+                     expand = c(0,0)
+                     )
 
 p1 <- ggpar(p0, palette = pal_33, legend = "right", legend.title = "Temperature", 
             title = "Nuclear TFEB in RT versus Cold (6h)",  
@@ -114,7 +135,7 @@ stat.test <- stat.test |>
   na.omit() |>
   add_xy_position(fun = "max", "Treatment", dodge = 0.8) 
 
-p2 <- p1 + stat_pvalue_manual(stat.test, label = "p",
+p2 <- p1 + stat_pvalue_manual(stat.test, label = "p.signif",
                               size = 4,
                               tip.length = 0.02, 
                               hide.ns = F)
@@ -122,7 +143,7 @@ p2 <- p1 + stat_pvalue_manual(stat.test, label = "p",
 p3 <- p2 + scale_color_manual(values = c("black", "black"))
 print(p3)
 
-CairoPDF("output/Fig2/Fig2E_TFEB_nuclear_WB_Comp.pdf", height = 10, width = 8)
+CairoPDF("output/Fig2/Fig2E_TFEB_nuclear_WB_Comp.pdf", height = 8, width = 12)
   print(p3)
 dev.off()
 

@@ -102,7 +102,7 @@ GCase <- mdat # save for correlation
 p0 <- ggbarplot(mdat, x = "Treatment", y = "Activity_uU_mg", 
                 add = c("mean_sd", "dotplot"), 
                 color = "Treatment", fill = "Treatment", 
-                add.params = list(width = 0.35, 
+                add.params = list(width = 0.20, 
                                   binwidth = 0.075*min(mdat$Activity_uU_mg, na.rm = T)
                                   ),
                 position = position_dodge(0.8),
@@ -144,13 +144,15 @@ p2 <- p1 + stat_pvalue_manual(
                                 "black", "black")
                      )
 
-CairoPDF(file = "output/Fig4/Fig4F_Exp45_GCase.pdf", height = 10, width = 12)
+CairoPDF(file = "output/Fig4/SFig4F_Exp45_GCase.pdf", height = 10, width = 12)
   print(p2)
 dev.off()
 ```
 
 ## Lipid-enzyme correlation
+
 Correlate GCase activity to total Cer and HexCer from untargeted data
+
 ```{r}
 # Load in lipid data using separate script and pull key variables
 names(lipids)[1] <- "Sample"
@@ -163,12 +165,13 @@ p0 <- ggscatter(mdat1,
                 x = "nmol_g", 
                 y = "Activity_uU_mg",
                 add = "reg.line", 
-                add.params = list(color = "black", fill = "lightgray"),
+                add.params = list(color = "black", 
+                                  fill = "lightgray"),
                 conf.int = T,     
                 palette = pal_45,   
                 color = "Treatment") +                         
   stat_cor(method = "spearman",
-          label.x = min(mdat1$nmol_g),               
+          #label.x = min(mdat1$nmol_g),               
           p.accuracy = 0.001, r.accuracy = 0.01
           ) +   
   xlab("Total ceramides (nmol/g)") +                
@@ -214,4 +217,3 @@ p0 <- ggscatter(mdat1,
         )
 p0
 ```
-
