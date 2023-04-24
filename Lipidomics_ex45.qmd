@@ -106,6 +106,9 @@ mdat1 <- mdat1 |> pivot_longer(-c(Name:Genotype),
                                names_to = "Subclass",
                                values_to = "nmol_g")
 
+# for GCase correlation
+lipids <- mdat1
+
 mdat1 <- mdat1 |> filter(Subclass %in% c("Total Cer", "Total HexCer")
                          )
 
@@ -219,7 +222,8 @@ p0 <- mdat1 |>
   ggplot(aes(x=Subclass,                
              y=norm_val,
              group = Condition,          
-             fill = Condition)) +
+             fill = Condition)
+         ) +
   scale_fill_manual("Group",   
                     values = c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
                     ) +
@@ -653,7 +657,6 @@ CairoPDF(file = "output/Fig4/SFig4E_BMP_species_not_diff.pdf", height = 10, widt
 dev.off()
 ```
 
-
 # Eddie
 
 ```{r}
@@ -705,4 +708,3 @@ p0
 
 
 ```
-

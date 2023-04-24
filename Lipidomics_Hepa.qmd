@@ -24,12 +24,13 @@ futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 
 show_col(pal_frontiers(palette = c("default"))(10))
 pal_cells <- c("#706F6FFF", "#007B3DFF", "#EFC000FF", "#6F286AFF")
+pal_cells <- c("#706F6FFF", "#95C11FFF")
 ```
 
 # 2. BMP analysis
 
-Hepa1-6 cells treated with siRNA containing control sequence or targetting a GOI. Overexpression using pBABE vectors.
-## Load data
+Hepa1-6 cells treated with siRNA containing control sequence or targetting a GOI. Overexpression using pBABE vectors. \## Load data
+
 ```{r}
 mdat <- read_csv("data/Hepa/2022_0401_BMP_Hepa_ng_mg.csv")
 mdat <- mdat |> filter(Media == "DMEM")
@@ -146,7 +147,7 @@ dev.off()
 siPla cells
 
 ```{r}
-# 
+#
 mdat4 <- mdat3 |> filter(Condition %in% c("scramble_2","siPla2g15")
                          ) |>
   droplevels()
@@ -380,3 +381,58 @@ CairoPDF(file = "output/Fig5/Fig5F_Hepa_BMP_species_pla.pdf", height = 10, width
   print(p2)
 dev.off()
 ```
+
+## siM6PR total
+```{r}
+mdat4 <- mdat3 |> filter(Condition %in% c("scramble", "siM6PR")
+                         ) |> droplevels()
+
+mdat4 <- mdat4 |> filter(!ID == "D_M6PR_01")
+pal_cells2 <- c("#706F6FFF", "#95C11FFF")
+p0 <- ggbarplot(mdat4, x = "Condition", y = "total_BMP",
+                add = c("mean_sd", "dotplot"),
+                color = "Condition", fill = "Condition", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.20,
+                                  binwidth = .025*max(mdat4$total_BMP, 
+                                                      na.rm = T)
+                                  ),
+                position = position_dodge(0.8),
+                size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.50*max(mdat4$total_BMP, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_cells2, legend = "right", 
+            legend.title = "Condition", 
+            title = "Total BMP",  
+            xlab = "Condition", 
+            ylab = "ng lipid/mg protein")
+
+stat.test <- mdat4 |>
+  t_test(total_BMP ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  add_xy_position(fun = "max", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p", 
+  size = 4,
+  step.increase = 0.12,
+  bracket.nudge.y = 0,
+  tip.length = 0.02, hide.ns = F)
+
+p3 <- p2 +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  scale_color_manual(values = c("black", "black")
+                     )
+
+CairoPDF(file = "output/Fig5/SFig5D_Hepa_siM6PR_total_BMP.pdf", height = 8, width = 8)
+  print(p3)
+dev.off()
+```
+

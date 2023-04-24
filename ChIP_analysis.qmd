@@ -14,10 +14,14 @@ if(!require(ggsci)){install.packages("ggsci")}
 if(!require(scales)){install.packages("scales")}
 if(!require(Cairo)){install.packages("Cairo")}
 if(!require(readxl)){install.packages("readxl")}
+if(!require(rstatix)){install.packages("rstatix")}
 if(!require(VennDiagram)){install.packages("VennDiagram")}
 if(!require(futile.logger)){install.packages("futile.logger")}
 futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 pal_33 <- c("#D51317", "#164194")
+show_col(pal_uchicago(palette = "default")(9))
+  
+pal_ChIP <- c("#767676FF", "#800000FF")
 ```
 
 # 2. Load data
@@ -98,6 +102,14 @@ gghistogram(mdat2, x = "Distance to TSS",
 not gonna work
 
 ```{r}
+RT_TFEB <- RT_TFEB |> drop_na() |>
+  mutate(Site = paste0(Chr, "_", Start, "_", End)
+         ) 
+
+Cold_TFEB <- Cold_TFEB |> drop_na() |>
+  mutate(Site = paste0(Chr, "_", Start, "_", End)
+         ) 
+
 RT_sites <- as.vector(RT_TFEB$Site)
 Cold_sites <- as.vector(Cold_TFEB$Site)
 
@@ -126,14 +138,12 @@ dev.off()
 ## Unique genes
 
 ```{r}
-RT_TFEB <- RT_TFEB |> drop_na() |>
-  mutate(Site = paste0(Chr, "_", Start, "_", End)
-         ) 
-
-Cold_TFEB <- Cold_TFEB |> drop_na() |>
-  mutate(Site = paste0(Chr, "_", Start, "_", End)
-         ) 
-
+RT <- tolower(as.vector(unique(RT_TFEB$`Gene Name`)
+                )
+              )
+Cold <- tolower(as.vector(unique(Cold_TFEB$`Gene Name`)
+                  )
+                )
 # Color scheme for Venn diagram
 myCol_fill <- pal_33
 myCol_text <- alpha(pal_33, 0.8)
@@ -391,13 +401,15 @@ dev.off()
 ```
 
 # 7. Data overlay
+
 ```{r}
 # Venn Diagram
-tset <- read_csv("data/other/data_overlay.csv")
+tset <- read_csv("data/other/data_overlay.csv") # not sure where all the ChIP genes here are from but ignore
+all_ChIP <- append(Cold, RT)
 
 Proteomics <- tolower(tset$Proteomics[!is.na(tset$Proteomics)])
 RNA <- tolower(tset$RNA[!is.na(tset$RNA)])
-ChIP <- tolower(unique(tset$ChIP[!is.na(tset$ChIP)]))
+ChIP <- tolower(unique(all_ChIP[!is.na(all_ChIP)]))
 
 show_col(pal_nejm(palette = c("default"), alpha = 1)(7))
 
@@ -415,7 +427,7 @@ v <-  venn.diagram(x = list(Proteomics, RNA, ChIP),
              filename = NULL, resolution = 600,   # image resolution
              output = T)
 
-CairoPDF(file = "output/Fig5/Fig5A_Data_overlay.pdf")
+CairoPDF(file = "output/Fig5/Fig5A_Data_overlay_test.pdf")
   grid.draw(v)
 dev.off()
 
@@ -423,7 +435,64 @@ shared <- ChIP[ChIP %in% Proteomics[Proteomics %in% RNA]]
 print(shared)
 ```
 
+# 8. Targeted ChIP-qPCR
 
+From Gisela in 2022
+
+```{r}
+mdat <- read_csv("data/ChIP/2022_0220_Targeted_ChIP_bar.csv")
+mdat$Group<-factor(mdat$Group)
+mdat$`Target Name`<-factor(mdat$`Target Name`, 
+                            levels = c("Ctsa", "Cers1",
+                                       "Plin2", "Insig2")
+                           )
+names(mdat)[3] <- "Gene"
+mdat$Group <- gsub("TFEB-IP", "TFEB", mdat$Group)
+
+mdat <- mdat |> group_by(Gene) |>
+  mutate(Normalized = Normalized/mean(Normalized[Group == "IgG"])
+         )
+
+p0 <- ggbarplot(mdat, x = "Gene", y = "Normalized",
+                add = c("mean_sd", "dotplot"), color = "Group", fill = "Group", 
+                error.plot = "errorbar", 
+                add.params = list(width = 0.25,
+                                  binwidth = .015*max(mdat$Normalized, na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.15) +
+  scale_y_continuous(limits = c(0.00, 1.20*max(mdat$Normalized, na.rm = T)
+                                ),
+                     expand = c(0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_ChIP, legend = "right", legend.title = "IP Antibody", 
+            title = "Liver ChIP-qPCR of TFEB targets",  
+            xlab = "Gene Target", ylab = "Normalized quantity") +
+  theme_bw(base_size = 18, base_family = "Arial") + 
+  theme(text = element_text(face = "bold", size = 18, family = "Arial")
+        ) +
+  scale_color_manual(values = c("black", "black"))
+
+stat.test <- mdat |>
+  group_by(Gene) |>
+  na.omit() |>
+  t_test(Normalized ~ Group) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Gene", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(stat.test, size = 12, step.increase = -0.02,
+                              tip.length = 0.02, hide.ns = T)
+
+CairoPDF(file = "output/Fig3/SFig3C_targeted_ChIP_qPCR.pdf",
+         height = 10, width = 14)
+  print(p2)
+dev.off()
+```
 
 # Old
 

@@ -161,16 +161,39 @@ mdat <- merge(GCase, lipids, by = "Sample")
 # Plot Cer and GCase first
 mdat1 <- mdat |> filter(Subclass == "Total Cer")
 
+p0 <- ggplot(mdat1, aes(x = nmol_g, y = Activity_uU_mg,
+                  color = Genotype.x, fill = Genotype.x)) +
+    geom_smooth(method = "lm") +
+    stat_cor(method = "spearman") +
+    geom_point(aes(colour = `Treatment`)) +
+    theme_bw(base_size = 12, base_family = "Arial") +
+    scale_color_manual(values = c("black", "#164194", "#D51317",
+                                  "grey66", "#31B7BCFF", "#F39200FF"
+                                   )
+                       ) +
+    labs(x = "Ceramides (nmol/g liver)",
+         y = "GCase activity") +
+    theme(legend.position = "none") 
+
+CairoPDF(file = "output/Fig4/Fig4F_GCase_Cer_corr_new.pdf",
+         height = 10, width = 8)
+  print(p0)
+dev.off()
+
+
+
+# only plots overall line
+
 p0 <- ggscatter(mdat1,                        
                 x = "nmol_g", 
                 y = "Activity_uU_mg",
                 add = "reg.line", 
-                add.params = list(color = "black", 
-                                  fill = "lightgray"),
+               # add.params = list(color = "black", 
+                #                  fill = "lightgray"),
                 conf.int = T,     
                 palette = pal_45,   
-                color = "Treatment") +                         
-  stat_cor(method = "spearman",
+                color = "Genotype.x") +                         
+  stat_cor(aes(color = "Genotype.x"), method = "spearman",
           #label.x = min(mdat1$nmol_g),               
           p.accuracy = 0.001, r.accuracy = 0.01
           ) +   

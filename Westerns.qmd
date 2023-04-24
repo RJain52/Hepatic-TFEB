@@ -12,10 +12,11 @@ editor: visual
 if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(readxl)){install.packages("readxl")}
 if(!require(ggpubr)){install.packages("ggpubr")}
-if(!require(Cairo)){install.packages("Cairo")}
+if(!require(Cairo)){install.packages("Cairo")} # Requires XQuartz software on MacOS
 if(!require(rstatix)){install.packages("rstatix")}
 if(!require(ggsci)){install.packages("ggsci")} 
 pal_33 <- c("#D51317", "#164194")
+pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
 ```
 
 # 2. Exp 33 General
@@ -28,26 +29,28 @@ mdat2 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 4)
 mdat3 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 1)
 mdat4 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 2)
 mdat5 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 3)
+mdat6 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = "Rab5a_01")
 
 mdat1$Protein <- "LAMP2"
 mdat2$Protein <- "LIPA"
 mdat3$Protein <- "LAMP1"
 mdat4$Protein <- "Rab5a"
 mdat5$Protein <- "LC3"
+mdat6$Protein <- "Rab5a"
 
 # LYPLA3
 names(mdat1)[3] <- "Target"
 names(mdat1)[5] <- "Ratio"
 
 
-mdat <- bind_rows(mdat1, mdat2, mdat3, mdat4, mdat5)
+mdat <- bind_rows(mdat1, mdat2, mdat3, mdat6, mdat5)
 mdat <- mdat |> select(Sample, Treatment, Ratio, Protein)
 
 mdat$Treatment <- factor(mdat$Treatment, levels = c("RT", "Cold")
                          )
 
 mdat$Protein <- factor(mdat$Protein, levels = c("LAMP1", "LAMP2",
-                                                "LIPA", "Rab5a",
+                                                "LIPA", "Rab5a", 
                                                 "LC3")
                          )
 
@@ -109,12 +112,15 @@ mdat <- read_xlsx("data/Westerns/2022_0525_Quant.xlsx", sheet = 4)
 mdat$Condition <- factor(mdat$Condition, levels = c("RT", "Cold"))
 names(mdat)[2] <- "Treatment"
 
-p0 <- ggbarplot(mdat, x = "Treatment", y = "Ratio", 
+mdat <- mdat |> mutate(Ratio_norm = Ratio/mean(Ratio[Treatment == "RT"])
+                       )
+
+p0 <- ggbarplot(mdat, x = "Treatment", y = "Ratio_norm", 
                 add = c("mean_sd", "dotplot"), color = "Treatment", fill = "Treatment", 
                 add.params = list(width = 0.20, 
-                                  binwidth = .13*min(mdat$Ratio, na.rm = T)),
+                                  binwidth = .13*min(mdat$Ratio_norm, na.rm = T)),
                 position = position_dodge(0.8), size = 0.5) +
-  scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio, na.rm = T)),
+  scale_y_continuous(limits = c(0.00, 1.2*max(mdat$Ratio_norm, na.rm = T)),
                      expand = c(0,0)
                      )
 
@@ -126,7 +132,7 @@ p1 <- ggpar(p0, palette = pal_33, legend = "right", legend.title = "Temperature"
 
 stat.test <- mdat |>
   na.omit() |>
-  t_test(Ratio ~ Treatment) |>
+  t_test(Ratio_norm ~ Treatment) |>
   adjust_pvalue(method = "none") |>
   add_significance("p")
 
@@ -143,10 +149,91 @@ p2 <- p1 + stat_pvalue_manual(stat.test, label = "p.signif",
 p3 <- p2 + scale_color_manual(values = c("black", "black"))
 print(p3)
 
-CairoPDF("output/Fig2/Fig2E_TFEB_nuclear_WB_Comp.pdf", height = 8, width = 12)
+CairoPDF("output/Fig2/Fig2E_TFEB_nuclear_WB_Comp_relRT.pdf", height = 8, width = 12)
   print(p3)
 dev.off()
 
 ```
 
 The `echo: false` option disables the printing of code (only output is displayed).
+
+# 4. Exp 45 TFEB KD
+```{r}
+mdat1 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "LAMP1")
+mdat2 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "LAMP2")
+mdat3 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "RAB5A")
+mdat4 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "LC3")
+mdat5 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "LYPLA3")
+mdat6 <-  read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "HNF4A")
+
+mdat1$Protein <- "LAMP1"
+mdat2$Protein <- "LAMP2"
+mdat3$Protein <- "RAB5A"
+mdat4$Protein <- "LC3B"
+mdat5$Protein <- "LYPLA3"
+mdat6$Protein <- "HNF4A"
+
+mdat <- bind_rows(mdat1, mdat2, mdat3, mdat4, mdat5, mdat6)
+mdat <- mdat |> select(Sample, Temp, Genotype, Ratio, Protein)
+
+mdat$Treatment <- paste0(mdat$Genotype, "_", mdat$Temp)
+mdat$Treatment <- factor(mdat$Treatment, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+
+mdat$Protein <- factor(mdat$Protein, levels = c("LAMP1", "LAMP2",
+                                                "RAB5A", "LC3B", 
+                                                "LYPLA3", "HNF4A")
+                         )
+
+mdat <- mdat |> group_by(Protein) |> 
+  mutate(norm = Ratio/mean(Ratio[Treatment == "Con_RT"])
+         ) 
+
+# Change 'x= ' to "Protein" if plotting multiple proteins 
+p0 <- ggbarplot(mdat, x = "Protein", y = "norm", 
+                add = c("mean_sd", "dotplot"), 
+                color = "Treatment", fill = "Treatment", 
+                add.params = list(width = 0.2,
+                                  binwidth = 0.05*min(mdat$norm, na.rm = T)
+                                  ),
+                position = position_dodge(0.8), size = 0.5
+                ) +
+  scale_y_continuous(limits = c(0.00, 1.75*max(mdat$norm, na.rm = T)
+                                ),
+                     expand = c(0.0,0)
+                     )
+
+p1 <- ggpar(p0, palette = pal_45, legend = "right", legend.title = "Temperature", 
+            title = "Exp 45 protein signal in RT versus Cold (6h)",  
+            xlab = "Treatment", ylab = "Normalized intensity") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  group_by(Protein) |>
+  wilcox_test(norm ~ Treatment) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Protein", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p.signif",
+  bracket.nudge.y = 0,
+  tip.length = 0.02, 
+  hide.ns = T)
+
+p3 <- p2 + theme_bw(base_size = 16) +
+  scale_color_manual(values = c("black", "black",
+                                "black", "black")
+                     )
+print(p3)
+
+CairoPDF("output/Fig4/SFig4D_Exp45_WB_Gen.pdf", height = 8, width = 14)
+  print(p3)
+dev.off()
+```
+
