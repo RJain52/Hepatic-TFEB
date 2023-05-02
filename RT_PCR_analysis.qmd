@@ -200,6 +200,11 @@ mdat <- read_excel("data/qPCR/2023_0423_Exp45_liver_TFEB_targets.xls",
                  range = "A38:AK377", 
                  trim_ws = T)
 
+# M6pr and Abhd6
+mdat <- read_excel("data/qPCR/2023_0424_Exp45_liver_targets_02.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
 
 mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
 
@@ -225,6 +230,10 @@ Y <- Y |> mutate(`Ct SD` = ifelse(is.na(`Ct SD`), 0, `Ct SD`)
                  )
 # Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
 Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90)
+
+# Remove Sqstm1 from M6pr and Abhd6 as two peaks in melt curve
+
+Y <- Y |> filter(!`Target Name` == "Sqstm1")
 
 # Make gene name factor
 Y$`Target Name` <- as.factor(Y$`Target Name`)
@@ -310,12 +319,127 @@ for (i in 1:length(targets)) {
 
 }
 
-CairoPDF(file = "output/Fig4/2023_0421_Exp45_KD_lyso_all.pdf", height = 10, width = 8)
+CairoPDF(file = "output/Fig4/2023_0424_Exp45_KD_select.pdf", height = 10, width = 8)
   for (i in 1:length(targets)) {
     print(plot_list[[i]])
   }
 dev.off()
 ```
+
+## eWAT
+Jess extracted RNA and ran plates
+```{r}
+# eWAT Tfeb
+mdat <- read_excel("data/qPCR/2023_0501_Exp45_eWAT__TFEB.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
+
+# Remove standard rows
+mdat <- mdat |> filter(Task == "UNKNOWN")
+
+# Subset out the relevant data
+Y <- mdat |> select(`Sample Name`, `Target Name`, 
+                    `CT`, `Quantity Mean`,
+                    `Ct SD`, `Quantity`)   
+
+
+# Convert CT and quantity to number instead of character values
+Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
+                 )
+
+# When the target was not present in the sample, the last 3 columns will have NA
+# Replace NA with value (0) that will pass the filters 
+Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
+                 )
+
+Y <- Y |> mutate(`Ct SD` = ifelse(is.na(`Ct SD`), 0, `Ct SD`)
+                 )
+# Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
+Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90)
+
+# Make gene name factor
+Y$`Target Name` <- as.factor(Y$`Target Name`)
+
+# Normalize to each samples RPS3
+Y <- Y |> group_by(`Sample Name`) |>
+  mutate(norm_quant = Quantity/mean(Quantity[`Target Name`=="RPS3"])
+  )
+
+# Remove RPS3
+Y <- Y |> filter(!`Target Name` == "RPS3") |> 
+  droplevels()
+
+Y$Condition <- gsub(" [[:digit:]]+", "", Y$`Sample Name`)
+Y$Condition <- gsub(" ", "_", Y$Condition)
+
+Y$Condition <- factor(Y$Condition, 
+                      levels = c("Con_RT", "Con_Cold",
+                                 "KD_RT", "KD_Cold")
+                      )
+
+# Graph stuff
+targets <-as.vector(names(table(Y$`Target Name`)))
+plot_list <- list()
+
+# Define x-axis variable
+a = "Condition"
+
+# Define y-axis variable
+b = "norm_quant"
+
+# Define additional variable related to color (if none, set equal to a)
+c = a
+
+for (i in 1:length(targets)) {
+  temp <- Y |> filter(`Target Name` %in% targets[i]) |>
+    droplevels()
+  
+  p0 <- ggbarplot(temp, x = a, y = b,
+                  add = c("mean_sd", "dotplot"), 
+                  color = a, fill = a, 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2, color = "grey23",
+                  binwidth = 0.01*max(temp$norm_quant, na.rm = T)),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.4*max(temp$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       ) +
+    scale_x_discrete(guide = guide_axis(angle = 45))
+  
+  p1 <- ggpar(p0, palette = pal_45, title = temp$`Target Name`[1],  
+              xlab = "", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black", "black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+  stat.test <- temp |>
+    group_by(`Target Name`) |>
+    t_test(norm_quant ~ Condition) |>
+    adjust_pvalue(method = "none") %>%
+    add_significance("p")
+  
+  stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+  stat.test <- stat.test |> add_xy_position(fun = "mean_sd", x = a, dodge = 0.8)
+
+  p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+    plot_list[[i]] = p2
+
+}
+
+CairoPDF(file = "output/Fig4/2023_0502_Exp45_KD_eWAT_all.pdf", height = 10, width = 8)
+  for (i in 1:length(targets)) {
+    print(plot_list[[i]])
+  }
+dev.off()
+```
+
 
 # 3. Exp 33 RT vs Cold
 
@@ -436,9 +560,33 @@ mdat <- read_excel("data/qPCR/2023_0419_Exp33_Sylwia_liver_03.xls",
                  range = "A38:AK377", 
                  trim_ws = T)
 
+# Sheet 04
+mdat <- read_excel("data/qPCR/2023_0424_Exp33_Sylwia_liver_04.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+# Sheet 05
+mdat <- read_excel("data/qPCR/2023_0425_Exp33_Sylwia_liver_05.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+# Sheet 06
+mdat <- read_excel("data/qPCR/2023_0425_Exp33_Sylwia_liver_06.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+# Sheet 07
+mdat <- read_excel("data/qPCR/2023_0426_Exp33_Sylwia_liver_07.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
 mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
 
-# Something is wrong with sample 2
+# Something is wrong with sample 2 for sheets 1-3 only
 mdat <- mdat |> filter(!`Sample Name` == "Cold_2")
 
 # Remove standard rows
@@ -459,7 +607,7 @@ Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
 Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
                  )
 # Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
-Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90, !Quantity == 0) # For excel_02, set CT >29.4
+Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90, !Quantity == 0) # For excel_02, set CT >29.4; for 6, >29
 
 # Make gene name factor
 Y$`Target Name` <- as.factor(Y$`Target Name`)
@@ -469,7 +617,7 @@ Y <- Y |> group_by(`Sample Name`) |>
   mutate(norm_quant = Quantity/Quantity[`Target Name`=="Rps3"])
 
 # Remove RPS3
-Y <- Y |> filter(!`Target Name` == "Rps3") |> 
+Y <- Y |> filter(!`Target Name` %in% c("Rps3")) |>      # Remove smpd1 for sheet 6
   droplevels()
 
 Y$Condition <- gsub("_[[:digit:]]+", "", Y$`Sample Name`)
@@ -500,18 +648,21 @@ for (i in 1:length(targets)) {
                   color = a, fill = a, 
                   error.plot = "errorbar", 
                   add.params = list(width = 0.2, color = "grey23",
-                  binwidth = 0.01*max(temp$norm_quant, na.rm = T)),
+                  binwidth = 0.015*max(temp$norm_quant, na.rm = T)),
                   position = position_dodge(0.8), size = 0.10) + 
-    scale_y_continuous(limits = c(0.00, 1.4*max(temp$norm_quant, na.rm = T)),
+    scale_y_continuous(limits = c(0.00, 1.3*max(temp$norm_quant, na.rm = T)),
                        expand = c(0,0)
-                       ) +
-    scale_x_discrete(guide = guide_axis(angle = 45))
+                       )
   
-  p1 <- ggpar(p0, palette = pal_45, title = temp$`Target Name`[1],  
-              xlab = "", ylab = "Normalized RNA Abundance") +
+  p1 <- ggpar(p0, palette = pal_45, title = temp$`Target Name`[1],
+              legend = "none",
+              xlab = "", ylab = "") +
     scale_color_manual(values = c("black", "black")
                        ) +
-    theme_bw(base_size = 16, base_family = "Arial")
+    theme_bw(base_size = 20, base_family = "Arial") +
+    theme(legend.position = "none",
+          axis.ticks.x = element_blank(),
+          axis.text.x = element_blank())
 
   stat.test <- temp |>
     group_by(`Target Name`) |>
@@ -522,16 +673,16 @@ for (i in 1:length(targets)) {
   stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
   stat.test <- stat.test |> add_xy_position(fun = "max", x = a, dodge = 0.8)
 
-  p2 <- p1 + stat_pvalue_manual(
+  p2 <- p1 + stat_pvalue_manual(bracket.nudge.y = 0.15,
       stat.test, label = "p.signif", 
-      hide.ns = T, size = 8
+      hide.ns = T, size = 14
       )
 
     plot_list[[i]] = p2
 
 }
 
-CairoPDF(file = "output/Fig2/2023_0419_Exp33_Sylwia_03_all.pdf", height = 10, width = 8)
+CairoPDF(file = "output/Fig2/2023_0426_Exp33_Sylwia_07_all.pdf", height = 10, width = 8)
   for (i in 1:length(targets)) {
     print(plot_list[[i]])
   }

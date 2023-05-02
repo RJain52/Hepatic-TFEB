@@ -29,7 +29,9 @@ pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
 Can skip after running code 1x
 
 ```{r}
-mdat <- read_csv("data/Exp45/2023_0213_TFEB_KD_Liver_nmol_g.csv")
+mdat <- read_csv("data/Exp45/2023_0213_TFEB_KD_Liver_nmol_g.csv") # liver data
+
+mdat <- read_csv("data/Exp45/2023_0427_TFEB_KD_plasma_nM.csv") # plasma data
 
 mydata1 <- mdat %>%
   mutate_if(is.numeric, ~replace(., is.na(.), 0)
@@ -76,17 +78,18 @@ my_SPL <- c("Cer", "GM3", "SM")
 mydata1$`Total SPL` <- rowSums(mydata1[,grep(paste(my_SPL, collapse = "|"),
                                              colnames(mydata1))])
 
-mydata1$Total_lipid <- rowSums(mydata1[,5:681])
+mydata1$Total_lipid <- rowSums(mydata1[,5:681]) # for liver
+mydata1$Total_lipid <- rowSums(mydata1[,6:318])
 
 ## Screen for outliers
 ggbarplot(mydata1, x = "Genotype", y = "Total_lipid", color = "Temp", fill = "Temp",
                 add = c("mean_sd", "dotplot"), error.plot = "errorbar", position = position_dodge(0.8),
                 alpha = 0.85, size = 0.15)
 
-# Remove sample 12
+# Remove sample 12 for liver
 mydata1 <- mydata1 |> filter(!Name == 12)
 
-write_csv(mydata1, "data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
+write_csv(mydata1, "data/Exp45/2023_0427_Exp45_plasma_nM_final.csv")
 ```
 
 # 3. Lipid sums
@@ -94,7 +97,9 @@ write_csv(mydata1, "data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
 Subclasses
 
 ```{r}
-mdat <- read_csv("data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv")
+mdat <- read_csv("data/Exp45/2023_0324_Exp45_Liver_nmol_g_final.csv") # liver
+
+mdat <- read_csv("data/Exp45/2023_0427_Exp45_plasma_nM_final.csv") # plasma
 ```
 
 ## Ceramides
@@ -657,7 +662,152 @@ CairoPDF(file = "output/Fig4/SFig4E_BMP_species_not_diff.pdf", height = 10, widt
 dev.off()
 ```
 
-# Eddie
+# 5. Plasma ACar
+Total
+```{r}
+mdat1 <- mdat |> select(Name:Genotype, `Total ACar`)
+
+mdat1 <- mdat1 |> pivot_longer(-c(Name:Genotype),
+                               names_to = "Total_ACar",
+                               values_to = "nM")
+
+mdat1$Condition <- paste0(mdat1$Genotype, "_", mdat1$Temp)
+mdat1$Condition <- factor(mdat1$Condition,
+                          levels = c("Con_RT", "Con_Cold",
+                                     "KD_RT", "KD_Cold")
+                          )
+
+mdat1 <- mdat1 |>
+  group_by(Total_ACar) |>
+  mutate(norm_val = nM/mean(nM[Condition == "Con_RT"])
+         )
+
+stat.test <- mdat1 |>
+  na.omit() |>
+  group_by(Total_ACar) |>
+  t_test(norm_val ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Total_ACar", dodge = 0.8) 
+
+p0 <- mdat1 |>
+  ggplot(aes(x=Total_ACar,                
+             y=norm_val,
+             group = Condition,          
+             fill = Condition)
+         ) +
+  scale_fill_manual("Group",   
+                    values = c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+                    ) +
+  geom_boxplot(aes(group = interaction(Condition, Total_ACar)),  
+               width = 0.5, alpha = 0.9,                  
+               outlier.shape = NA,                        
+               position = position_dodge(width = 0.8)     
+               ) +
+  geom_point(shape = 21,                
+             size = 1,                
+             alpha = 0.7,
+             position=position_jitterdodge(dodge.width = 0.8), 
+             color = "grey30") + 
+  theme(legend.position = "none",                 
+        plot.title = element_text(size = 11)
+        ) +
+  xlab("Total ACar (nM)") +                                 
+  ylab("Relative amount"
+       ) +
+  scale_y_continuous(limits = c(0, 5), expand = c(0, 0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +  
+  ggtitle("Plasma lipidomics") +     
+  stat_compare_means(method = "anova", label.y = 4.5) +
+  stat_compare_means(label = "p.signif",            
+                     hide.ns = T, label.y = 4,
+                     method = "t.test")
+p0
+
+CairoPDF(file = "output/Fig3/SFig4X_Exp45_plasma_ACars.pdf",
+         height = 8, width = 12)
+  print(p0)
+dev.off()
+```
+
+ACar species
+```{r}
+mdat1 <- mdat |> select(Name:Genotype, `ACar 12:0`:`ACar 4:0`)
+
+mdat1 <- mdat1 |> pivot_longer(-c(Name:Genotype),
+                               names_to = "ACar",
+                               values_to = "nM")
+
+mdat1$Condition <- paste0(mdat1$Genotype, "_", mdat1$Temp)
+mdat1$Condition <- factor(mdat1$Condition,
+                          levels = c("Con_RT", "Con_Cold",
+                                     "KD_RT", "KD_Cold")
+                          )
+
+mdat1 <- mdat1 |>
+  group_by(ACar) |>
+  mutate(norm_val = nM/mean(nM[Condition == "Con_RT"])
+         )
+
+stat.test <- mdat1 |>
+  na.omit() |>
+  group_by(ACar) |>
+  t_test(norm_val ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "ACar", dodge = 0.8) 
+
+p0 <- mdat1 |>
+  ggplot(aes(x=ACar,                
+             y=norm_val,
+             group = Condition,          
+             fill = Condition)
+         ) +
+  scale_fill_manual("Group",   
+                    values = c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+                    ) +
+  geom_boxplot(aes(group = interaction(Condition, ACar)),  
+               width = 0.5, alpha = 0.9,                  
+               outlier.shape = NA,                        
+               position = position_dodge(width = 0.8)     
+               ) +
+  geom_point(shape = 21,                
+             size = 1,                
+             alpha = 0.7,
+             position=position_jitterdodge(dodge.width = 0.8), 
+             color = "grey30") + 
+  theme(legend.position = "none",                 
+        plot.title = element_text(size = 11)
+        ) +
+  xlab("ACar species") +                                 
+  ylab("Relative amount"
+       ) +
+  scale_y_continuous(limits = c(0, 5), expand = c(0, 0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +  
+  ggtitle("Untargeted lipidomics") +     
+  stat_compare_means(method = "anova", label.y = 4.5) +
+  stat_compare_means(label = "p.signif",            
+                     hide.ns = T, label.y = 4,
+                     method = "t.test")
+p0
+
+CairoPDF(file = "output/Fig3/SFig4X_Exp45_plasma_ACar_species.pdf",
+         height = 8, width = 12)
+  print(p0)
+dev.off()
+```
+
+## Eddie
 
 ```{r}
 mdat <- read_csv("eddie_ketones.csv")

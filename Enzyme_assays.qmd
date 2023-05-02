@@ -240,3 +240,79 @@ p0 <- ggscatter(mdat1,
         )
 p0
 ```
+
+# 4. Acid sphingomyelinase Assay
+
+Exp 45
+
+```{r}
+mdat <- read_xlsx("data/Exp45/2023_0425_ASMase.xlsx", sheet = "FINAL")
+mdat <- read_xlsx("data/Exp45/2023_0426_ASMase_at2.xlsx", sheet = "FINAL")
+
+# remove samples 8 and 16 from first sheet
+mdat <- mdat |> filter(!Sample %in% c(8, 15, 16))
+
+
+# remove samples 5, 6, 18 and 21 from first sheet 
+mdat <- mdat |> filter(!Sample %in% c(18, 21))
+
+names(mdat)[4] <- "RFU_ug"
+mdat$Treatment <- paste0(mdat$Genotype, "_", mdat$Temp)
+
+mdat$Treatment <- factor(mdat$Treatment, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold"
+                                                    )
+                         )
+ASMase <- mdat # save for correlation 
+
+mdat <- mdat |> mutate(RFU_ug = RFU_ug/mean(RFU_ug[Treatment == "Con_RT"]))
+
+p0 <- ggbarplot(mdat, x = "Treatment", y = "RFU_ug", 
+                add = c("mean_sd", "dotplot"), 
+                color = "Treatment", fill = "Treatment", 
+                add.params = list(width = 0.20, 
+                                  binwidth = 0.075*min(mdat$RFU_ug, na.rm = T)
+                                  ),
+                position = position_dodge(0.8),
+                size = 0.5) +
+      scale_y_continuous(limits = c(0.00, 1.5*max(mdat$RFU_ug, na.rm = T)
+                                    ),
+                         expand = c(0,0)
+                         )
+
+p1 <- ggpar(p0, palette = pal_45, legend = "top", legend.title = "Group", 
+            title = "ASMase activity assay",  
+            xlab = "Group", ylab = "Relative activity (RFU/mg)") +
+        theme_bw(base_size = 16, base_family = 'Arial') +
+        theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold"),
+              axis.text.y = element_text(size = 12, hjust = -0.5)
+              )
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(RFU_ug ~ Treatment) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", dodge = 0.8) 
+
+p2 <- p1 + stat_pvalue_manual(
+  stat.test, label = "p",
+  step.increase = 0.05,
+  bracket.nudge.y = 0,
+  tip.length = 0.02, size = 4,
+  hide.ns = F) +
+  scale_color_manual(values = c("black", "black",
+                                "black", "black")
+                     )
+
+CairoPDF(file = "output/Fig4/SFig4F_Exp45_ASMase.pdf", height = 10, width = 10)
+  print(p2)
+dev.off()
+```

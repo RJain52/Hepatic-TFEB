@@ -21,7 +21,7 @@ futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 pal_33 <- c("#D51317", "#164194")
 show_col(pal_uchicago(palette = "default")(9))
   
-pal_ChIP <- c("#767676FF", "#800000FF")
+pal_ChIP <- c("#767676FF", "#800000FF", "black", "#155F83FF")
 ```
 
 # 2. Load data
@@ -491,6 +491,184 @@ p2 <- p1 + stat_pvalue_manual(stat.test, size = 12, step.increase = -0.02,
 CairoPDF(file = "output/Fig3/SFig3C_targeted_ChIP_qPCR.pdf",
          height = 10, width = 14)
   print(p2)
+dev.off()
+```
+
+## April 2023 Exp33
+
+```{r}
+# Targeted
+mdat <- read_excel("data/ChIP/2023_0427_Exp33_targeted_ChIP.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
+
+# Remove standard rows
+mdat <- mdat |> filter(Task == "UNKNOWN")
+
+# Subset out the relevant data
+Y <- mdat |> select(`Sample Name`, `Target Name`, 
+                    `CT`, `Quantity Mean`,
+                    `Ct SD`, `Quantity`)   
+
+
+# Convert CT and quantity to number instead of character values
+Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
+                 )
+
+# When the target was not present in the sample, the last 3 columns will have NA
+# Replace NA with value (0) that will pass the filters 
+Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
+                 )
+# Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
+#Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90) # high CT is expected for non-amplifying controls
+
+# Make gene name factor
+Y$`Target Name` <- as.factor(Y$`Target Name`)
+
+# Create grouping variable
+Y$Condition <- gsub("_", " ", Y$`Sample Name`)
+Y$Condition <- gsub("6h ", "", Y$Condition)
+Y$Condition <- gsub("[[:digit:]]+ ", "", Y$Condition)
+Y$Condition <- gsub(" ", "_", Y$Condition)
+
+Y$Temp <- factor(gsub("_.*", "", Y$Condition))
+Y$Sample <- factor(gsub(".*\\_", "", Y$Condition))
+Y$Num <- factor(gsub("_.*", "", Y$`Sample Name`))
+
+Y$Num <- factor(gsub("5", "4", Y$Num))
+Y$Num <- factor(gsub("6", "4", Y$Num))
+
+Y$row <- rownames(Y)
+
+Y$Condition <- factor(Y$Condition, 
+                      levels = c("RT_IgG", "RT_input", "RT_Tfeb",
+                                 "Cold_IgG", "Cold_input",  "Cold_Tfeb")
+                      )
+
+# Normalize to each samples to temperature inputs
+Y <- Y |> group_by(`Target Name`, Y$Temp, Y$Num) |>
+  mutate(norm_quant = Quantity/Quantity[Sample=="input"])
+
+Y <- Y |> filter(!Condition %in% c("RT_input", "Cold_input")
+                 ) |> droplevels()
+
+Y <- Y |> group_by(`Target Name`, Y$Temp, Y$Num) |>
+  mutate(norm_quant = Quantity/Quantity[Sample=="IgG"])
+
+Y <- Y |> filter(!row %in% c(23, 59, 62, 113, 132, 198, 215))
+
+
+# Graph stuff
+targets <-as.vector(names(table(Y$`Target Name`)))
+plot_list <- list()
+
+# Define x-axis variable
+a = "Condition"
+
+# Define y-axis variable
+b = "norm_quant"
+
+# Define additional variable related to color (if none, set equal to a)
+c = a
+
+for (i in 1:length(targets)) {
+  temp <- Y |> filter(`Target Name` %in% targets[i]) |>
+    droplevels()
+  
+  p0 <- ggbarplot(temp, x = a, y = b,
+                  add = c("mean_sd", "dotplot"), 
+                  color = a, fill = a, 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2, color = "grey23",
+                  binwidth = 0.01*max(temp$norm_quant, na.rm = T)
+                  ),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.4*max(temp$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       ) +
+    scale_x_discrete(guide = guide_axis(angle = 45))
+  
+  p1 <- ggpar(p0, palette = pal_ChIP, title = temp$`Target Name`[1],  
+              xlab = "", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black", "black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+  stat.test <- temp |>
+    group_by(`Target Name`) |>
+    t_test(norm_quant ~ Condition) |>
+    adjust_pvalue(method = "none") %>%
+    add_significance("p")
+  
+  stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+  stat.test <- stat.test |> add_xy_position(fun = "mean_sd", x = a, dodge = 0.8)
+
+  p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+    plot_list[[i]] = p2
+
+}
+
+CairoPDF(file = "output/Fig3/2023_0428_Exp33_targeted_ChIP_all.pdf", height = 10, width = 8)
+  for (i in 1:length(targets)) {
+    print(plot_list[[i]])
+  }
+dev.off()
+```
+Main Figure targets
+```{r}
+temp <- Y |> filter(Temp == "RT") |> droplevels()
+
+temp <- temp |> filter(`Target Name` %in% c("Psap intron", "Ctsb intron", 
+                                            "npc1 prom", "npc1 intron")
+                       ) |>
+  droplevels()
+
+temp$`Target Name` <- factor(temp$`Target Name`, levels = c("Psap intron", "Ctsb intron", 
+                                            "npc1 prom", "npc1 intron")
+               ) 
+temp <- temp |> droplevels()
+
+p0 <- ggbarplot(temp, x = "Target Name", y = "norm_quant",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Sample", fill = "Sample", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.01*max(temp$norm_quant, na.rm = T)
+                  ),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.25*max(temp$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       )
+  
+p1 <- ggpar(p0, palette = pal_ChIP, title = "Targeted ChIP-qPCR",  
+              xlab = "Binding site", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- temp |>
+    group_by(`Target Name`) |>
+    t_test(norm_quant ~ Sample) |>
+    adjust_pvalue(method = "none") |>
+    add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+stat.test <- stat.test |> add_xy_position(fun = "max", "Target Name", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+CairoPDF(file = "output/Fig3/Fig3C_Exp33_targeted_ChIP.pdf", height = 8, width = 10)
+    print(p2)
 dev.off()
 ```
 
