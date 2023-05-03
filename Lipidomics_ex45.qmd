@@ -663,7 +663,9 @@ dev.off()
 ```
 
 # 5. Plasma ACar
+
 Total
+
 ```{r}
 mdat1 <- mdat |> select(Name:Genotype, `Total ACar`)
 
@@ -736,6 +738,7 @@ dev.off()
 ```
 
 ACar species
+
 ```{r}
 mdat1 <- mdat |> select(Name:Genotype, `ACar 12:0`:`ACar 4:0`)
 

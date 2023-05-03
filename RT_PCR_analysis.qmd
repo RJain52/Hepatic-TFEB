@@ -327,7 +327,9 @@ dev.off()
 ```
 
 ## eWAT
+
 Jess extracted RNA and ran plates
+
 ```{r}
 # eWAT Tfeb
 mdat <- read_excel("data/qPCR/2023_0501_Exp45_eWAT__TFEB.xls",
@@ -439,7 +441,6 @@ CairoPDF(file = "output/Fig4/2023_0502_Exp45_KD_eWAT_all.pdf", height = 10, widt
   }
 dev.off()
 ```
-
 
 # 3. Exp 33 RT vs Cold
 
@@ -584,6 +585,13 @@ mdat <- read_excel("data/qPCR/2023_0426_Exp33_Sylwia_liver_07.xls",
                  range = "A38:AK377", 
                  trim_ws = T)
 
+# Sheet 08
+mdat <- read_excel("data/qPCR/2023_0503_Exp33_Sylwia_liver_08.xls",
+                 sheet = 'Results', 
+                 range = "A38:AK377", 
+                 trim_ws = T)
+
+
 mdat <- mdat[rowSums(is.na(mdat)) != ncol(mdat),]
 
 # Something is wrong with sample 2 for sheets 1-3 only
@@ -607,7 +615,7 @@ Y <- Y |> mutate(across(CT:Quantity, ~as.numeric(.))
 Y <- Y |> mutate(Quantity = ifelse(is.na(Quantity), 0, Quantity)
                  )
 # Remove values with CT >30, CT SD > 0.90 [prefer 0.60 but data dependent]
-Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90, !Quantity == 0) # For excel_02, set CT >29.4; for 6, >29
+Y <- Y |> filter(!CT > 30, !`Ct SD` > 0.90, !Quantity == 0) # For excel_02, set CT >29.4; for 6, >29; for 08 >29.3
 
 # Make gene name factor
 Y$`Target Name` <- as.factor(Y$`Target Name`)
@@ -682,7 +690,7 @@ for (i in 1:length(targets)) {
 
 }
 
-CairoPDF(file = "output/Fig2/2023_0426_Exp33_Sylwia_07_all.pdf", height = 10, width = 8)
+CairoPDF(file = "output/Fig2/2023_0503_Exp33_Sylwia_08_all.pdf", height = 10, width = 8)
   for (i in 1:length(targets)) {
     print(plot_list[[i]])
   }
