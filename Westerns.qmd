@@ -25,11 +25,11 @@ gel01 sheet 2 = LAMP2, sheet 4 = LIPA; gel02 sheet 2 = LYPLA3
 
 ```{r}
 mdat1 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 2)
-mdat2 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 4)
-mdat3 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 1)
+mdat2 <- read_xlsx("data/Westerns/2023_0512_Exp33_gel_quant.xlsx", sheet = 3)
+mdat3 <- read_xlsx("data/Westerns/2023_0512_Exp33_gel_quant.xlsx", sheet = 1)
 mdat4 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 2)
 mdat5 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 3)
-mdat6 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = "Rab5a_01")
+mdat6 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 4)
 
 mdat1$Protein <- "LAMP2"
 mdat2$Protein <- "LIPA"
@@ -63,11 +63,11 @@ p0 <- ggbarplot(mdat, x = "Protein", y = "norm",
                 add = c("mean_sd", "dotplot"), 
                 color = "Treatment", fill = "Treatment", 
                 add.params = list(width = 0.2,
-                                  binwidth = 0.50*min(mdat$norm, na.rm = T)
+                                  binwidth = 0.15*min(mdat$norm, na.rm = T)
                                   ),
                 position = position_dodge(0.8), size = 0.5
                 ) +
-  scale_y_continuous(limits = c(0.00, 1.50*max(mdat$norm, na.rm = T)
+  scale_y_continuous(limits = c(0.00, 1.30*max(mdat$norm, na.rm = T)
                                 ),
                      expand = c(0.0,0)
                      )
@@ -89,16 +89,17 @@ stat.test <- stat.test |>
   add_xy_position(fun = "max", "Protein", dodge = 0.8) 
 
 p2 <- p1 + stat_pvalue_manual(
-  stat.test, label = "p",
+  stat.test, label = "p.signif",
+  size = 6,
   bracket.nudge.y = 0.1,
   tip.length = 0.02, 
-  hide.ns = F)
+  hide.ns = T)
 
 p3 <- p2 + theme_bw(base_size = 16) +
   scale_color_manual(values = c("black", "black"))
 print(p3)
 
-CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen.pdf", height = 8, width = 14)
+CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen_updated.pdf", height = 8, width = 14)
   print(p3)
 dev.off()
 ```
@@ -158,6 +159,7 @@ dev.off()
 The `echo: false` option disables the printing of code (only output is displayed).
 
 # 4. Exp 45 TFEB KD
+
 ```{r}
 mdat1 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "LAMP1")
 mdat2 <- read_xlsx("data/Westerns/2023_0423_Exp45_quant.xlsx", sheet = "LAMP2")
@@ -236,4 +238,3 @@ CairoPDF("output/Fig4/SFig4D_Exp45_WB_Gen.pdf", height = 8, width = 14)
   print(p3)
 dev.off()
 ```
-

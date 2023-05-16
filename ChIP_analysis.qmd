@@ -437,6 +437,7 @@ print(shared)
 
 # 8. Targeted ChIP-qPCR
 
+## March 2022 Exp77
 From Gisela in 2022
 
 ```{r}
@@ -621,7 +622,9 @@ CairoPDF(file = "output/Fig3/2023_0428_Exp33_targeted_ChIP_all.pdf", height = 10
   }
 dev.off()
 ```
+
 Main Figure targets
+
 ```{r}
 temp <- Y |> filter(Temp == "RT") |> droplevels()
 
@@ -671,6 +674,178 @@ CairoPDF(file = "output/Fig3/Fig3C_Exp33_targeted_ChIP.pdf", height = 8, width =
     print(p2)
 dev.off()
 ```
+
+## Updated Main
+
+Based on Roberto's suggestions, throw Ctsa into main figure and move something out.
+
+```{r}
+Y1 <- Y |> select(`Sample Name`, `Target Name`, Condition:Sample,
+                  norm_quant)
+
+new <- Y1 |> filter(Temp == 'RT') |>
+  select(`Sample Name`, Sample, `Target Name`, norm_quant) |>
+  droplevels()
+
+names(new)[3:ncol(new)] <- names(old)
+
+all_RT <- rbind(old, new)
+
+temp <- all_RT |> filter(Gene %in% c("Psap intron", "Ctsb intron", 
+                                            "Ctsa", "npc1 intron"))
+
+temp$`Target Name` <- factor(temp$Gene, levels = c("Ctsa", "Ctsb intron",
+                                                   "Psap intron", "npc1 intron")
+               ) 
+temp <- temp |> droplevels()
+
+temp$Group <- ifelse(temp$Group == "TFEB", "Tfeb", temp$Group)
+temp$Group <- factor(temp$Group, levels = c("IgG", "Tfeb")
+                     )
+
+
+p0 <- ggbarplot(temp, x = "Target Name", y = "Normalized",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Group", fill = "Group", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.01*max(temp$Normalized, na.rm = T)
+                  ),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.25*max(temp$Normalized, na.rm = T)),
+                       expand = c(0,0)
+                       )
+  
+p1 <- ggpar(p0, palette = pal_ChIP, title = "Targeted ChIP-qPCR",  
+              xlab = "Binding site", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- temp |>
+    group_by(`Target Name`) |>
+    t_test(Normalized ~ Group) |>
+    adjust_pvalue(method = "none") |>
+    add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+stat.test <- stat.test |> add_xy_position(fun = "max", "Target Name", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+CairoPDF(file = "output/Fig3/Fig3C_Exp33_targeted_ChIP_updated.pdf", height = 8, width = 10)
+    print(p2)
+dev.off()
+```
+
+## Updated Supplement
+
+```{r}
+temp <- all_RT |> filter(Gene %in% c("Cers1", "Plin2", "Insig2", "npc1 prom")
+                         )
+
+temp$`Target Name` <- factor(temp$Gene, levels = c("Cers1", "Plin2", "Insig2", "npc1 prom")
+               ) 
+temp <- temp |> droplevels()
+
+temp$Group <- ifelse(temp$Group == "TFEB", "Tfeb", temp$Group)
+temp$Group <- factor(temp$Group, levels = c("IgG", "Tfeb")
+                     )
+
+p0 <- ggbarplot(temp, x = "Target Name", y = "Normalized",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Group", fill = "Group", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.01*max(temp$Normalized, na.rm = T)
+                  ),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.25*max(temp$Normalized, na.rm = T)),
+                       expand = c(0,0)
+                       )
+  
+p1 <- ggpar(p0, palette = pal_ChIP, title = "Targeted ChIP-qPCR",  
+              xlab = "Binding site", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- temp |>
+    group_by(`Target Name`) |>
+    t_test(Normalized ~ Group) |>
+    adjust_pvalue(method = "none") |>
+    add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+stat.test <- stat.test |> add_xy_position(fun = "max", "Target Name", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+CairoPDF(file = "output/Fig3/SFig3C_Exp33_targeted_ChIP_updated.pdf", height = 10, width = 14)
+    print(p2)
+dev.off()
+```
+
+## RT versus Cold
+Pla2g15 promoter and intron in RT versus cold, IgG versus TFEB (?)
+```{r}
+Y1 <- Y |> filter(`Target Name` %in% c("pla2g15 prom", "pla2g15 intron")) |>
+  droplevels()
+
+Y1 <- Y |> filter(`Target Name` == "pla2g15 prom") |>
+  droplevels()
+
+Y1 <- Y1 |> filter(!row %in% c(120, 134, 140))
+
+Y1$Condition <- factor(Y1$Condition, levels = c("RT_IgG", "RT_Tfeb",
+                                                "Cold_IgG", "Cold_Tfeb")
+                       )
+Y1$Temp <- factor(Y1$Temp, levels = c("RT", "Cold")
+                       )
+
+p0 <- ggbarplot(Y1, x = "Temp", y = "norm_quant",
+                  add = c("mean_sd", "dotplot"), 
+                  color = "Condition", fill = "Condition", 
+                  error.plot = "errorbar", 
+                  add.params = list(width = 0.2,
+                  binwidth = 0.01*max(Y1$norm_quant, na.rm = T)
+                  ),
+                  position = position_dodge(0.8), size = 0.10) + 
+    scale_y_continuous(limits = c(0.00, 1.3*max(Y1$norm_quant, na.rm = T)),
+                       expand = c(0,0)
+                       )
+  
+p1 <- ggpar(p0, palette = pal_ChIP, title = "Targeted ChIP-qPCR",  
+              xlab = "Binding site", ylab = "Normalized RNA Abundance") +
+    scale_color_manual(values = c("black", "black", "black", "black")
+                       ) +
+    theme_bw(base_size = 16, base_family = "Arial")
+
+stat.test <- Y1 |>
+    group_by(Temp) |>
+    t_test(norm_quant ~ Sample) |>
+    adjust_pvalue(method = "none") |>
+    add_significance("p")
+  
+stat.test$p.adj.signif <- stat.test$p.signif # If you don't run this, adjusted p-values plot
+stat.test <- stat.test |> add_xy_position(fun = "max", "Temp", dodge = 0.8)
+
+p2 <- p1 + stat_pvalue_manual(
+      stat.test, label = "p.signif", 
+      hide.ns = T, size = 8
+      )
+
+CairoPDF(file = "output/Fig5/Fig5B_Exp33_targeted_ChIP_pla_prom.pdf", height = 14, width = 10)
+    print(p2)
+dev.off()
+```
+
 
 # Old
 
