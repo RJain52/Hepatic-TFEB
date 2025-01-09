@@ -383,6 +383,7 @@ dev.off()
 ```
 
 ## siM6PR total
+
 ```{r}
 mdat4 <- mdat3 |> filter(Condition %in% c("scramble", "siM6PR")
                          ) |> droplevels()
@@ -435,4 +436,3 @@ CairoPDF(file = "output/Fig5/SFig5D_Hepa_siM6PR_total_BMP.pdf", height = 8, widt
   print(p3)
 dev.off()
 ```
-

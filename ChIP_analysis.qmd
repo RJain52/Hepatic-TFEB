@@ -99,8 +99,6 @@ gghistogram(mdat2, x = "Distance to TSS",
 
 ## Total unique binding sites
 
-not gonna work
-
 ```{r}
 RT_TFEB <- RT_TFEB |> drop_na() |>
   mutate(Site = paste0(Chr, "_", Start, "_", End)
@@ -438,7 +436,7 @@ print(shared)
 # 8. Targeted ChIP-qPCR
 
 ## March 2022 Exp77
-From Gisela in 2022
+
 
 ```{r}
 mdat <- read_csv("data/ChIP/2022_0220_Targeted_ChIP_bar.csv")
@@ -630,13 +628,15 @@ temp <- Y |> filter(Temp == "RT") |> droplevels()
 
 temp <- temp |> filter(`Target Name` %in% c("Psap intron", "Ctsb intron", 
                                             "npc1 prom", "npc1 intron")
-                       ) |>
-  droplevels()
+                       ) |> droplevels()
 
 temp$`Target Name` <- factor(temp$`Target Name`, levels = c("Psap intron", "Ctsb intron", 
                                             "npc1 prom", "npc1 intron")
                ) 
 temp <- temp |> droplevels()
+
+temp$norm_quant <- ifelse(temp$CT >= 30, 0, temp$norm_quant)
+
 
 p0 <- ggbarplot(temp, x = "Target Name", y = "norm_quant",
                   add = c("mean_sd", "dotplot"), 
@@ -676,8 +676,6 @@ dev.off()
 ```
 
 ## Updated Main
-
-Based on Roberto's suggestions, throw Ctsa into main figure and move something out.
 
 ```{r}
 Y1 <- Y |> select(`Sample Name`, `Target Name`, Condition:Sample,
@@ -793,7 +791,9 @@ dev.off()
 ```
 
 ## RT versus Cold
+
 Pla2g15 promoter and intron in RT versus cold, IgG versus TFEB (?)
+
 ```{r}
 Y1 <- Y |> filter(`Target Name` %in% c("pla2g15 prom", "pla2g15 intron")) |>
   droplevels()
@@ -845,7 +845,6 @@ CairoPDF(file = "output/Fig5/Fig5B_Exp33_targeted_ChIP_pla_prom.pdf", height = 1
     print(p2)
 dev.off()
 ```
-
 
 # Old
 

@@ -724,15 +724,15 @@ p0 <- mdat1 |>
   scale_y_continuous(limits = c(0, 5), expand = c(0, 0)
                      ) +
   theme_bw(base_size = 16, base_family = "Arial") +  
-  ggtitle("Plasma lipidomics") +     
+  ggtitle("Plasma lipidomics") +  
   stat_compare_means(method = "anova", label.y = 4.5) +
   stat_compare_means(label = "p.signif",            
                      hide.ns = T, label.y = 4,
                      method = "t.test")
 p0
 
-CairoPDF(file = "output/Fig3/SFig4X_Exp45_plasma_ACars.pdf",
-         height = 8, width = 12)
+CairoPDF(file = "output/Fig3/SFig3B_Exp45_plasma_ACars.pdf",
+         height = 10, width = 8)
   print(p0)
 dev.off()
 ```
@@ -810,54 +810,4 @@ CairoPDF(file = "output/Fig3/SFig4X_Exp45_plasma_ACar_species.pdf",
 dev.off()
 ```
 
-## Eddie
-
-```{r}
-mdat <- read_csv("eddie_ketones.csv")
-mdat <- mdat |> filter(!`ID #` == 361)
-mdat1 <- mdat |> select(`Mouse line`, Diet, Genotype, Sex, `Ketone Avg`)
-mdat1$Diet <- gsub("Acute ", "", mdat1$Diet)
-mdat1$Diet <- gsub(" Diet", "", mdat1$Diet)
-
-mdat1$Condition <- paste0(mdat1$Sex, "_", mdat1$Diet)
-mdat1$Condition <- factor(mdat1$Condition,
-                          levels = c("F_Ctrl", "F_Keto",
-                                     "M_Ctrl", "M_Keto")
-                          )
-
-mdat1$`Mouse line` <- factor(mdat1$`Mouse line`,
-                          levels = c("ACAD10", "ACAD11")
-                          )
-mdat1$Genotype <- factor(mdat1$Genotype,
-                          levels = c("WT", "KO")
-                          )
-
-
-p0 <- mdat1 |> filter(`Mouse line` == "ACAD11") |>
-  ggplot(aes(x=Condition,                
-             y=`Ketone Avg`,
-             group = Genotype,          
-             fill = Genotype)) +
-  geom_boxplot(aes(group = interaction(Genotype, Condition)),  
-               width = 0.5, alpha = 0.9,                  
-               outlier.shape = NA,                        
-               position = position_dodge(width = 0.8)     
-               ) +
-  geom_point(shape = 21,                
-             size = 1.5,                
-             alpha = 0.7,
-             position=position_jitterdodge(dodge.width = 0.8), 
-             color = "grey30") + 
-  theme(legend.position = "none",                 
-        plot.title = element_text(size = 11)
-        ) +
-  xlab("Condition") +                                 
-  ylab("Ketones"
-       ) +
-  theme_bw(base_size = 16, base_family = "Arial") +  
-  ggtitle("ACAD11") 
-p0
-
-
-
-```
+## 

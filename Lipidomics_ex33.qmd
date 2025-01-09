@@ -539,7 +539,7 @@ dev.off()
 
 ## Hepatic PG species
 
-Split into low, medium and high abundance. Note that L06 seems to be a high outlier for PG lipids. The BMPs look ok. It might be an IS thing that was off there; I am keeping it in the dataset though as it changes sd but likely not the results of any t-tests.
+Split into low, medium and high abundance.
 
 ```{r}
 # Species changes - PG

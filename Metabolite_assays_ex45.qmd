@@ -1,0 +1,492 @@
+---
+title: "Metabolite Assays"
+author: Raghav Jain
+format: html
+editor: visual
+---
+
+# 1. Load Packages
+
+```{r}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(readxl)){install.packages("readxl")}
+if(!require(ggpubr)){install.packages("ggpubr")}
+if(!require(RColorBrewer)){install.packages("RColorBrewer")}
+if(!require(ggsci)){install.packages("ggsci")}
+if(!require(scales)){install.packages("scales")}
+if(!require(Cairo)){install.packages("Cairo")}
+if(!require(rstatix)){install.packages("rstatix")}
+
+show_col(pal_frontiers("default")(10))
+pal_45 <- c("#D51317", "#164194", "#F39200FF", "#31B7BCFF")
+```
+
+# 2. Exp 45 Ketone Body
+
+```{r}
+mdat <- read_xlsx("data/Met_assays/2023_0321_Exp45_Ketone_final.xlsx", sheet = "Final")
+
+mdat$Condition <- factor(mdat$Condition, levels = c("Con-RT", "Con-Cold",
+                                                    "KD-RT", "KD-Cold")
+                         )
+mdat$Genotype <- gsub("-.*", "", mdat$Condition)
+
+p0 <- ggbarplot(data = mdat, x = "Condition", y = "Conc_mM", fill = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.05*min(mdat$Conc_mM,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.9)
+          ) +
+  scale_y_continuous(limits = c(0, 1.15), expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Circulating Ketones",
+            ylab = "BHB (mM)", xlab = "Group") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(Conc_mM ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = 0,
+  stat.test, label = "p.signif", 
+  tip.length = 0.02, size = 4,
+  hide.ns = T)
+
+CairoPDF(file = "output/Fig4/Fig4C_Exp45_ketone.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+# 3. Exp 45 CTT
+
+```{r}
+mdat <- read_xlsx("data/Exp45/Exp_45_data.xlsx", sheet = "Sheet2")
+
+temp <- mdat |> select(`Con or KD`, `Exp ID #`, RT_Cold, `T-0h`:`T-6h`)
+temp <- temp |> 
+  group_by(`Con or KD`, RT_Cold) |>
+  pivot_longer(cols = starts_with("T"),
+               names_to = "Time", 
+               values_to = "Temp")
+
+temp_sum <- temp |> 
+  group_by(`Con or KD`, RT_Cold, Time) |>
+  summarise(
+    mean = mean(Temp, na.rm = T),
+    sd = sd(Temp,na.rm = T)
+  )
+  
+temp_sum$group <- paste0(temp_sum$`Con or KD`, "_", temp_sum$RT_Cold)
+temp_sum$group <- factor(temp_sum$group, 
+                         levels = c("Con_RT", "Con_Cold",
+                                    "KD_RT", "KD_Cold"))
+
+p0 <- temp_sum |> ggplot(aes(x=Time, y=mean, group=group, color=group, shape =`Con or KD`)) + 
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.1, 
+                position=position_dodge(0.00)) +
+  geom_line() + geom_point(size = 3) +
+  scale_color_manual(values = c("#D51317", "#164194", 
+                                "#F39200FF", "#31B7BCFF")
+                     ) +
+  scale_x_discrete(labels = c("0", "1", "2", "3", "4", "5", "6"), expand = c(0.02, 0.0)) +
+  xlab("Time (h)") +
+  ylab("Core temperature (C)") +
+  ggtitle("Cold Tolerance Test", 
+          subtitle = "Male B6 mice given AAV8 with eGFP-shRNA containing scramble or TFEB target sequence.") +
+  theme_bw(base_size = 16, base_family = "Arial") + 
+  theme(text = element_text(face = "bold")
+        )
+  
+
+CairoPDF(file = "output/Fig4/Fig4A_Exp45_CTT_wide.pdf", height = 8, width = 12)
+  print(p0)
+dev.off()
+
+# Add significance in AI
+temp_6h <- temp |> filter(Time == "T-2h")
+temp_6h$`Con or KD` <- factor(temp_6h$`Con or KD`)
+temp_6h$RT_Cold <- factor(temp_6h$RT_Cold)
+names(temp_6h)[1] <- "Genotype"
+
+summary(aov(temp_6h$Temp ~ temp_6h$Genotype*temp_6h$RT_Cold))
+
+stat.test <- temp_6h |> group_by(Genotype) |>
+  t_test(Temp ~ RT_Cold) 
+
+
+stat.test2 <- temp_6h |> group_by(RT_Cold) |>
+  t_test(Temp ~ Genotype) 
+
+summary(aov(temp_6h$Temp ~ temp_6h$Genotype*temp_6h$RT_Cold))
+```
+
+# 4. Exp 45 Weight
+
+```{r}
+mdat <- read_xlsx("data/Exp45/Exp_45_data.xlsx", sheet = "Sheet2")
+temp <- mdat |> select(`Con or KD`, `Exp ID #`, RT_Cold, 
+                       `Liver wet weight (g)`)
+
+names(temp) <- c("Genotype", "ID", "Temp", "Liver")
+
+temp <- temp |>
+  pivot_longer(-c(Genotype, ID, Temp),
+               names_to = "weight", 
+               values_to = "g")
+
+temp <- temp |> mutate(Condition = paste0(Genotype, "_", Temp))
+
+temp$Condition <- factor(temp$Condition, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+
+p0 <- ggbarplot(data = temp, x = "Condition", y = "g", 
+                fill = "Condition", color = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.015*min(temp$g,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.9)
+          ) +
+  scale_y_continuous(limits = c(0, 2), expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Exp 45 liver wet weight",
+            ylab = "Liver weight (g)", xlab = "Group") +
+  scale_color_manual(values = c("black", "black", "black", "black"))
+
+stat.test <- temp |>
+  na.omit() |>
+  t_test(g ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max", "Condition") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = 0,
+  stat.test, label = "p.signif", 
+  tip.length = 0.02, size = 4,
+  hide.ns = T)
+
+CairoPDF(file = "output/Fig4/SFig4A_Exp45_liver_weight.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+## change in body weight
+
+```{r}
+mdat1 <- mdat |> mutate(delta_weight = `initial weight (g)` - `final weight (g)`)
+
+mdat1 <- mdat1 |> select(`Con or KD`, `Exp ID #`,
+                         RT_Cold, delta_weight)
+
+names(mdat1) <- c("Genotype", "ID", "Temp", "Change")
+
+mdat2 <- mdat1 |>
+  pivot_longer(-c(Genotype, ID, Temp),
+               names_to = "weight", 
+               values_to = "g")
+
+mdat2 <- mdat2 |> mutate(Condition = paste0(Genotype, "_", Temp))
+
+mdat2$Condition <- factor(mdat2$Condition, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+
+p0 <- ggbarplot(data = mdat2, x = "Condition", y = "g", 
+                fill = "Condition", color = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.05*min(mdat2$g,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.9)
+          ) +
+  scale_y_continuous(limits = c(0, 5), expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+
+p1 <- ggpar(p0, palette = pal_45, title = "Exp 45 Body Weight Loss",
+            ylab = "Body weight (g)", xlab = "Group") +
+  scale_color_manual(values = c("black", "black", "black", "black"))
+
+stat.test <- mdat2 |>
+  na.omit() |> 
+  t_test(g ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "mean_sd", "Condition") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = 0,
+  stat.test, label = "p.signif", 
+  tip.length = 0.02, size = 4,
+  hide.ns = T)
+
+CairoPDF(file = "output/Fig4/SFig4A_Exp45_BW_change.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+# 5. Exp 45 NEFA
+
+```{r}
+mdat <- read_xlsx("data/Met_assays/2023_0330_Exp45_NEFA_plasma.xlsx", sheet = "Final")
+
+mdat$Condition <- paste0(mdat$Genotype, "_", mdat$Temp)
+mdat$Condition <- factor(mdat$Condition, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+mdat <- mdat |> filter(!Sample == 1)
+mdat <- mdat |>
+  mutate(rel_amt = Alternative_average/mean(Alternative_average[Condition == "Con_RT"])
+         )
+
+p0 <- ggbarplot(data = mdat, x = "Condition", y = "rel_amt", fill = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.10*min(mdat$rel_amt,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.8)
+          ) +
+  scale_y_continuous(limits = c(0, 1.50*max(mdat$rel_amt)),
+                     expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Circulating NEFAs",
+            ylab = "Relative NEFAs", xlab = "Group") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(rel_amt ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = -0.01,
+  stat.test, label = "p", 
+  tip.length = 0.02, size = 4,
+  hide.ns = F)
+
+CairoPDF(file = "output/Fig4/Fig4E_Exp45_NEFA.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+# 6. Exp 45 TG
+
+```{r}
+mdat <- read_xlsx("data/Met_assays/2023_0330_Exp45_TG_plasma.xlsx", sheet = "Final")
+
+mdat$Condition <- paste0(mdat$Genotype, "_", mdat$Temp)
+mdat$Condition <- factor(mdat$Condition, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+mdat <- mdat |>
+  mutate(rel_amt = average_mg_uL/mean(average_mg_uL[Condition == "Con_RT"])
+         )
+
+p0 <- ggbarplot(data = mdat, x = "Condition", y = "rel_amt", fill = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.10*min(mdat$rel_amt,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.8)
+          ) +
+  scale_y_continuous(limits = c(0, 1.50*max(mdat$rel_amt)),
+                     expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Circulating TGs",
+            ylab = "Relative TGs", xlab = "Group") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(rel_amt ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = -0.005,
+  stat.test, label = "p", 
+  tip.length = 0.02, size = 4,
+  hide.ns = F)
+
+CairoPDF(file = "output/Fig4/Fig4E_Exp45_TG.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+## Redo
+
+```{r}
+mdat <- read_xlsx("data/Met_assays/2023_0420_Exp45_TG_plasma.xlsx", sheet = "R_FINAL")
+
+mdat$Condition <- paste0(mdat$Con_KD, "_", mdat$Temp)
+mdat$Condition <- factor(mdat$Condition, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+mdat <- mdat |>
+  mutate(rel_amt = mg_dL/mean(mg_dL[Condition == "Con_RT"])
+         )
+
+p0 <- ggbarplot(data = mdat, x = "Condition", y = "rel_amt", fill = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.10*min(mdat$rel_amt,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.8)
+          ) +
+  scale_y_continuous(limits = c(0, 1.50*max(mdat$rel_amt)),
+                     expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Circulating TGs",
+            ylab = "Relative TGs", xlab = "Group") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(rel_amt ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = 0,
+  stat.test, label = "p", 
+  tip.length = 0.02, size = 4,
+  hide.ns = F)
+
+CairoPDF(file = "output/Fig4/SFig4B_Exp45_TG.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```
+
+# 7. Exp 45 Cholesterol
+
+Plasma cholesterol
+
+```{r}
+mdat <- read_xlsx("data/Met_assays/2023_0331_Exp45_cholesterol_plasma.xlsx", sheet = "Final")
+
+mdat$Condition <- paste0(mdat$Genotype, "_", mdat$Temp)
+mdat$Condition <- factor(mdat$Condition, levels = c("Con_RT", "Con_Cold",
+                                                    "KD_RT", "KD_Cold")
+                         )
+mdat <- mdat |>
+  mutate(rel_amt = Conc_ug_mL/mean(Conc_ug_mL[Condition == "Con_RT"])
+         )
+
+p0 <- ggbarplot(data = mdat, x = "Condition", y = "rel_amt", fill = "Condition",
+          add = c('mean_sd', 'dotplot'),
+          add.params = list(width = 0.25,
+                            binwidth = 0.10*min(mdat$rel_amt,
+                                               na.rm = T)
+                            ),
+          position = position_dodge(0.8)
+          ) +
+  scale_y_continuous(limits = c(0, 1.50*max(mdat$rel_amt)),
+                     expand = c(0,0)
+                     ) +
+  theme_bw(base_size = 16, base_family = "Arial") +
+  theme(text = element_text(colour = 'black', 
+                                  family = "Arial", 
+                                  size = 16, 
+                                  face = "bold")
+        )
+                   
+
+p1 <- ggpar(p0, palette = pal_45, title = "Circulating cholesterol",
+            ylab = "Relative abundance", xlab = "Group") 
+
+stat.test <- mdat |>
+  na.omit() |>
+  t_test(rel_amt ~ Condition) |>
+  adjust_pvalue(method = "none") |>
+  add_significance("p")
+
+stat.test$p.adj.signif <- stat.test$p.signif
+stat.test <- stat.test |>
+  na.omit() |>
+  add_xy_position(fun = "max") 
+
+p2 <- p1 + stat_pvalue_manual(step.increase = -0.005,
+  stat.test, label = "p", 
+  tip.length = 0.02, size = 4,
+  hide.ns = F)
+
+CairoPDF(file = "output/Fig4/Fig4E_Exp45_Chol.pdf", height = 8, width = 8)
+  print(p2)
+dev.off()
+```

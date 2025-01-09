@@ -28,8 +28,9 @@ mdat1 <- read_xlsx("data/Westerns/Exp33_gel01_quant.xlsx", sheet = 2)
 mdat2 <- read_xlsx("data/Westerns/2023_0512_Exp33_gel_quant.xlsx", sheet = 3)
 mdat3 <- read_xlsx("data/Westerns/2023_0512_Exp33_gel_quant.xlsx", sheet = 1)
 mdat4 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 2)
-mdat5 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 3)
+#mdat5 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 3)
 mdat6 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 4)
+mdat5 <- read_xlsx("data/Westerns/2023_0413_Exp33_gel_quant.xlsx", sheet = 5)    # New LC3
 
 mdat1$Protein <- "LAMP2"
 mdat2$Protein <- "LIPA"
@@ -54,10 +55,14 @@ mdat$Protein <- factor(mdat$Protein, levels = c("LAMP1", "LAMP2",
                                                 "LC3")
                          )
 
+mdat$ID <- rownames(mdat)
+mdat <- mdat |> filter(!ID %in% c("26", "28", "34", "49", "54"))
+
 mdat <- mdat |> group_by(Protein) |> 
   mutate(norm = Ratio/mean(Ratio[Treatment == "RT"])
          ) 
 
+  
 # Change 'x= ' to "Protein" if plotting multiple proteins 
 p0 <- ggbarplot(mdat, x = "Protein", y = "norm", 
                 add = c("mean_sd", "dotplot"), 
@@ -99,7 +104,7 @@ p3 <- p2 + theme_bw(base_size = 16) +
   scale_color_manual(values = c("black", "black"))
 print(p3)
 
-CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen_updated.pdf", height = 8, width = 14)
+CairoPDF("output/Fig2/Fig2A_Exp33_WB_Gen_updated2.pdf", height = 8, width = 14)
   print(p3)
 dev.off()
 ```
