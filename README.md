@@ -7,6 +7,7 @@ Sylwia Michorowska 1,6 , Rakesh Verma 4 , Kathryn Scheuler 1 , Vania Hinkovska-G
 Evgenia Shishkova 8 , Wen-Xing Ding 4 , Joshua J Coon 2,8,9 , James A. Shayman 4 , Monther
 Abu-Remaileh 5 , and Judith A. Simcox 1,2*
 
+<pre>
 1 Department of Biochemistry, University of Wisconsin-Madison, Madison, WI 53706
 2 Howard Hughes Medical Institute, Department of Biochemistry, University of Wisconsin-Madison, Madison, WI 53706
 3 Department of Chemistry, University of Wisconsin-Madison, Madison, WI 53706
@@ -18,6 +19,7 @@ Abu-Remaileh 5 , and Judith A. Simcox 1,2*
 9 Morgridge Institute for Research, Madison, WI 53715
 *Correspondence: jsimcox@wisc.edu
 †Co-First authorship
+</pre>
 
 doi: https://doi.org/10.1101/2023.11.03.565498
 
